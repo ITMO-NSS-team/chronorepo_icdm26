@@ -66,7 +66,7 @@ def main():
     digest = {}
     for name, path in [("lite", "results.jsonl"),
                        ("verified", "results_verified.jsonl"),
-                       ("locbench", "results_locbench.jsonl")]:
+                       ("locbench", "results_locbench_gt.jsonl")]:
         recs = load(path)
         if not recs:
             continue

@@ -45,16 +45,25 @@ def api_key():
     return k
 
 
+MAX_CANDS = 0  # 0 = use all
+
+
 def build_prompt(rec, condition):
     if condition == "bm25_plain":
         cands = [{"file": p} for p in rec["bm25_top"]]
     elif condition == "hybrid_plain":
         cands = [{"file": c["file"]} for c in rec["hybrid_top"]]
-    else:
+    else:  # hybrid_evidence / hybrid_content: keep annotations
         cands = rec["hybrid_top"]
+    if MAX_CANDS:
+        cands = cands[:MAX_CANDS]
     lines = []
     for i, c in enumerate(cands, 1):
-        ev = f"   [{c['evidence']}]" if c.get("evidence") else ""
+        ev = ""
+        if c.get("evidence"):
+            ev = f"   [{c['evidence']}]"
+        elif condition == "hybrid_content" and c.get("snippet"):
+            ev = f"\n   {c['snippet']}"
         lines.append(f"{i}. {c['file']}{ev}")
     return (f"## Issue\n{rec['issue']}\n\n## Candidate files\n"
             + "\n".join(lines)
@@ -104,7 +113,7 @@ def parse_ranking(text, candidates):
 
 
 def main():
-    global INP, OUT, MODEL, URL
+    global INP, OUT, MODEL, URL, MAX_CANDS
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=8)
@@ -113,11 +122,14 @@ def main():
     ap.add_argument("--model", default=MODEL)
     ap.add_argument("--url", default=URL,
                     help="OpenAI-compatible chat completions endpoint")
+    ap.add_argument("--max-cands", type=int, default=0,
+                    help="truncate candidate list to first N (0 = all)")
     ap.add_argument("--conditions", nargs="*",
                     default=["bm25_plain", "hybrid_plain", "hybrid_evidence"])
     args = ap.parse_args()
     INP, OUT, MODEL, URL = (Path(args.input), Path(args.out), args.model,
                             args.url)
+    MAX_CANDS = args.max_cands
     key = "local" if "localhost" in URL or "127.0.0.1" in URL else api_key()
 
     recs = [json.loads(l) for l in open(INP, encoding="utf-8")]

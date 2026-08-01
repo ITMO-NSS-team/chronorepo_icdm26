@@ -28,8 +28,9 @@ Our run covers 540/560 instances (see D). Wilson 95% CIs for Acc@5.
 | ChronoRepo graph candidates, no LLM (ours) | 52.6 | [48.4, 56.8] | 58.1 | ~$0 |
 | + one vanilla Qwen2.5-7B call, top-20 (ours) | 58.1 | [53.9, 62.2] | 60.9 | <$0.001 |
 | + one vanilla Qwen2.5-7B call, top-50 (ours) | 66.1 | [62.0, 70.0] | 70.2 | <$0.001 |
-| + one Claude Sonnet 4.5 call, top-50 (ours) | **69.8** | [65.8, 73.5] | **72.8** | ~$0.007 |
-| candidate ceiling @50 (all gold present) | 79.6 | — | — | — |
+| + one Claude Sonnet 4.5 call, top-50 (ours) | 69.8 | [65.8, 73.5] | 72.8 | ~$0.007 |
+| + one vanilla Qwen2.5-7B call, top-100 (ours) | **69.1** | [65.1, 72.8] | **74.4** | <$0.001 |
+| candidate ceiling @50 / @100 (all gold present) | 79.6 / **88.3** | — | — | — |
 | Agentless, Claude-3.5 (quoted) | 67.5 | — | 67.5 | LLM calls |
 | CodeRankEmbed (quoted) | 74.3 | — | 80.9 | GPU embeddings |
 | LocAgent, fine-tuned Qwen-7B, agent (quoted) | 78.6 | — | 79.6 | GPU serving |
@@ -73,6 +74,24 @@ Cross-benchmark reading: the free graph layer contributes +18.4 (Lite) and
 +10.0 and +14.0. The pattern replicates the LocBench result (+18.3 free,
 +13.5 for a cent), so it is not an artifact of one benchmark's
 construction.
+
+## B3. Wider baskets and code content (two follow-up experiments)
+
+**Top-100 basket.** Extending the union to 100 candidates raises the
+ceiling from 79.6% to **88.3%** — above the LocAgent-with-Claude aggregate
+(83.4) — and the same vanilla 7B call converts part of it: 66.1 → 69.1
+Acc@5 (exact McNemar 24/8, p = 0.007), matching the frontier-model-on-50
+result at a tenth of the cost. Depth of the candidate list remains the
+single most productive lever found in this study.
+
+**Code skeletons in the prompt.** Attaching compact code skeletons (first
+docstring line + up to 12 class/def signatures, ~500 chars) to the top-20
+candidates does not help the vanilla 7B: 64.4 vs 66.1 (p = 0.21; roughly
+half of the small deficit is attributable to a slightly weaker basket mix
+in this run). Together with the earlier evidence-annotation result, this
+suggests single-call small models rank paths well but cannot exploit
+in-prompt code context; reading code appears to pay off only inside an
+agentic loop or possibly for stronger models (untested).
 
 ## C. Breakdown by number of gold files
 
@@ -132,16 +151,17 @@ reproduces their aggregate: 93.7 vs 94.2 published):
 | Q3 (<=3175) | 76 | 88.2 | 60.5 |
 | Q4 (>3175) | 73 | 94.5 | 69.9 |
 
-## F. Coverage note (540/560)
+## F. Coverage note
 
-Twenty LocBench instances are missing from our run: 5 belong to three
-repositories whose initial bare clone failed (ccxt/ccxt,
-home-assistant/core, roboflow/supervision; transient network failures), and
-15 have base commits unreachable from default clone refs (PR-branch
-commits); both causes are mechanical, fixed in the current code
-(`git fetch origin <sha>` fallback), and a re-run recovering them is in
-progress. Missing instances can move Acc@5 by at most ±3.7 points in the
-adversarial direction.
+Final no-LLM grid coverage: **559/560** LocBench instances, zero errors.
+The initial run missed 20 (transient clone failures on three large
+repositories; 15 base commits from PR branches unreachable from default
+clone refs — recovered by a `git fetch origin <sha>` fallback now in
+`chrono.py`). On the full 559, strict Acc@5 of the no-LLM rows shifts by
+at most +0.9 points versus the 540-instance subset used by the LLM-rerank
+rows (whose candidate baskets were prepared before the recovery): BM25
+34.3→34.7, grep 34.6→40.1 (grep benefited most from the recovered yt-dlp
+instances), graph configs 52.6→53.5.
 
 ## G. Does effectiveness depend on the length of project history?
 
