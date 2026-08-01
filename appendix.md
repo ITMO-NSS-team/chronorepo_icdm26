@@ -45,6 +45,35 @@ p = 0.007; each LLM rung vs no-LLM: p < 1e-13; conclusion: widening
 candidate coverage (top-20 -> top-50 ceiling 63.3 -> 79.6) buys roughly
 twice what model strength buys (+3.7 pts).
 
+## B2. The same ladder on SWE-bench Lite and Verified
+
+Identical pipeline and candidate recipe, gold = files of the reference
+patch (both benchmarks are single-file by construction, so the ground-truth
+subtlety of Appendix A does not arise). Rerank model: vanilla
+Qwen2.5-7B-Instruct, one call, no fine-tuning, no agent loop.
+
+| Method | Lite Acc@5 (n=300) | Verified Acc@5 (n=500) |
+|---|---|---|
+| BM25, no LLM | 48.3 [42.7, 54.0] | 36.2 [32.1, 40.5] |
+| ChronoRepo graph, no LLM | 66.7 [61.2, 71.8] | 54.8 [50.4, 59.1] |
+| + one Qwen2.5-7B call over top-50 | **76.7** [71.6, 81.1] | **68.8** [64.6, 72.7] |
+| candidate ceiling @50 | 84.0 | 80.4 |
+| LocAgent + Claude-3.5 (their released predictions) | 93.7 | n/a |
+
+Acc@10 for the reranked rows: 79.0 (Lite), 72.6 (Verified). Exact McNemar
+for the LLM rung against the no-LLM graph ranking: 34/4 discordant on Lite
+(p = 6e-7), 78/8 on Verified (p = 2e-15).
+
+Note that the top-50 union and the paper's graph configuration share their
+leading candidates, so they coincide at Acc@5/Acc@10; the union only lifts
+the ceiling (i.e. what a reranker can reach), which is exactly its purpose.
+
+Cross-benchmark reading: the free graph layer contributes +18.4 (Lite) and
++18.6 (Verified) points over BM25, and a sub-cent LLM call adds another
++10.0 and +14.0. The pattern replicates the LocBench result (+18.3 free,
++13.5 for a cent), so it is not an artifact of one benchmark's
+construction.
+
 ## C. Breakdown by number of gold files
 
 Strict Acc@5, official ground truth:

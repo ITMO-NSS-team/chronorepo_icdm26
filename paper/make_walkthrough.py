@@ -171,7 +171,7 @@ ranked_list(0.37, "2 · + graph propagation", "+40 ms, $0",
             "gold pulled to rank 9  (top-10) ✓", "#a8620a")
 ranked_list(0.04, "3 · + one 7B call (top-50)", "+2 s, <$0.001",
             [f"{QWEN_GOLD_RANK} sphinx/ext/autodoc/__init__.py  ★"] +
-            ["2 tests/test_ext_autodoc.py", "3 doc/.../autodoc.rst"],
+            ["2 tests/test_ext_autodoc.py", "3 sphinx/ext/apidoc.py"],
             f"gold at rank {QWEN_GOLD_RANK}  ✓", "#1e7a34")
 
 for y in (0.665, 0.335):
