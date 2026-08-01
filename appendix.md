@@ -114,7 +114,38 @@ commits); both causes are mechanical, fixed in the current code
 progress. Missing instances can move Acc@5 by at most ±3.7 points in the
 adversarial direction.
 
-## G. Cost summary
+## G. Does effectiveness depend on the length of project history?
+
+LocBench instances bucketed by the commit count of their repository
+(quartiles). Gains are paired within instance; `co-edges` is the median
+number of co-change edges available at the instance's base commit.
+Reproduce with `experiments/analyze_history_length.py`.
+
+| History (commits) | n | ΔR@10 graph over BM25 | Δ temporal vs static layer | Sonnet-4.5 Acc@5 | median co-edges |
+|---|---|---|---|---|---|
+| Q1 short (<=4,320) | 136 | +2.3 | −1.2 | 75.7 | 993 |
+| Q2 (<=12,593) | 135 | +12.6 | −2.2 | 71.1 | 6,868 |
+| Q3 (<=31,224) | 144 | +7.8 | +1.4 | 60.4 | 12,280 |
+| Q4 long (>31,224) | 125 | +11.2 | −0.6 | 72.8 | 22,926 |
+
+The dependence is a threshold, not a slope. In young repositories (under
+~5k commits, ~1k co-change edges) graph propagation adds almost nothing
+over BM25; from Q2 onwards the gain jumps to +8–13 points and then
+saturates rather than growing with history size. Saturation follows from
+the decay itself: at λ = 1/90 days a one-year-old commit carries weight
+0.017, so the method effectively reads only the last one to two years of
+activity, and django's two decades confer no advantage over a five-year
+project. The flip side is that code untouched for years is invisible to
+the temporal layer.
+
+The temporal-vs-static column shows no trend (−2.2 to +1.4, noise): which
+single layer wins does not depend on history length; what matters is
+having both. Caveat: history-length quartiles are confounded with
+repository size and category mix (the Q3 dip mirrors the size-quartile dip
+in Appendix E and is a composition artifact), so the defensible claim is
+the threshold, not the ordering of buckets.
+
+## H. Cost summary
 
 One CPU core (Windows 10, 12-core machine, 48 GB RAM, no GPU): median full
 pipeline (history mining + both graph layers + 28 ranking variants) 5–7 s
