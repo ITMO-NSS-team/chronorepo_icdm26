@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChronoRepo — temporal knowledge graph demo</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --border: rgba(11,11,11,0.10);
+    --blue: #2a78d6;      /* static edges, score bars */
+    --orange: #eb6834;    /* temporal (co-change) edges */
+    --good: #006300;      /* gold-file marker text */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --border: rgba(255,255,255,0.10);
+      --blue: #3987e5;
+      --orange: #d95926;
+      --good: #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --border: rgba(255,255,255,0.10);
+    --blue: #3987e5; --orange: #d95926; --good: #0ca30c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1020px; margin: 0 auto; padding: 20px 16px 48px; }
+
+  header.app { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  header.app h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  header.app .tag {
+    font-size: 11px; color: var(--ink-2); border: 1px solid var(--border);
+    border-radius: 99px; padding: 2px 10px; background: var(--surface);
+  }
+  p.sub { margin: 2px 0 16px; color: var(--ink-2); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+
+  /* ---- index bar ---- */
+  .indexbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .indexbar select, .indexbar button, .blast select, .issuebar select {
+    font: inherit; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--grid); border-radius: 8px; padding: 6px 10px;
+  }
+  .indexbar button.primary, .issuebar button {
+    background: var(--blue); color: #fff; border-color: transparent; cursor: pointer;
+    font-weight: 600; padding: 6px 16px;
+  }
+  .indexbar button[disabled], .issuebar button[disabled] { opacity: 0.5; cursor: default; }
+  #idxlog {
+    font: 12px/1.7 ui-monospace, Consolas, monospace; color: var(--ink-2);
+    margin: 10px 0 0; white-space: pre-wrap; min-height: 0;
+  }
+  #idxlog .ok { color: var(--good); }
+
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .chip {
+    font-size: 12px; border: 1px solid var(--border); border-radius: 99px;
+    padding: 3px 10px; color: var(--ink-2); background: var(--surface);
+    font-variant-numeric: tabular-nums;
+  }
+  .chip b { color: var(--ink); font-weight: 600; }
+
+  /* ---- tabs ---- */
+  nav.tabs { display: flex; gap: 4px; margin: 20px 0 12px; border-bottom: 1px solid var(--grid); }
+  nav.tabs button {
+    font: inherit; font-weight: 600; color: var(--muted); background: none; border: none;
+    padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  nav.tabs button.on { color: var(--ink); border-bottom-color: var(--blue); }
+  nav.tabs button[disabled] { opacity: 0.4; cursor: default; }
+  section.tab { display: none; }
+  section.tab.on { display: block; }
+
+  /* ---- graph tab ---- */
+  .graphctl { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .graphctl label { display: flex; gap: 6px; align-items: center; color: var(--ink-2); font-size: 13px; }
+  .graphctl input[type=range] { width: 220px; accent-color: var(--blue); }
+  #yearlbl { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  svg#graph { width: 100%; height: auto; display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .legend { display: flex; gap: 18px; margin-top: 8px; font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+  .legend .sw { display: inline-block; width: 22px; height: 0; border-top: 2.5px solid var(--blue); vertical-align: middle; margin-right: 6px; }
+  .legend .sw.t { border-top-style: dashed; border-top-color: var(--orange); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  #tip {
+    position: fixed; pointer-events: none; z-index: 10; display: none;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 10px; font-size: 12px; color: var(--ink); box-shadow: 0 4px 14px rgba(0,0,0,.12);
+  }
+  #tip .d { color: var(--ink-2); }
+
+  /* ---- blast tab ---- */
+  .blast .head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  table.rank { width: 100%; border-collapse: collapse; }
+  table.rank th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--grid);
+  }
+  table.rank td { padding: 7px 8px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  table.rank tr:last-child td { border-bottom: none; }
+  td.mono, .mono { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+  td.num { font-variant-numeric: tabular-nums; color: var(--ink-2); width: 52px; }
+  .bar { height: 8px; border-radius: 4px; background: var(--blue); min-width: 3px; }
+  .barwrap { width: 140px; }
+  .ev { display: inline-block; font-size: 11px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 99px; padding: 1px 8px; margin: 1px 3px 1px 0; white-space: nowrap; }
+
+  /* ---- issue tab ---- */
+  .issuebar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  textarea#issuetxt {
+    width: 100%; min-height: 84px; font: 13px/1.5 inherit; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--grid); border-radius: 8px; padding: 8px 10px; resize: vertical;
+  }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 720px) { .cols { grid-template-columns: 1fr; } }
+  .cols h3 { margin: 0 0 8px; font-size: 13px; }
+  .cols h3 .m { color: var(--muted); font-weight: 400; }
+  ol.files { margin: 0; padding-left: 22px; }
+  ol.files li { padding: 3px 0; border-bottom: 1px dashed var(--grid); }
+  ol.files li:last-child { border-bottom: none; }
+  .gold { color: var(--good); font-weight: 700; font-size: 11px; margin-left: 6px; white-space: nowrap; }
+  .why { color: var(--muted); font-size: 11px; display: block; }
+  .refstrip { margin-top: 12px; }
+
+  footer.note { margin-top: 28px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--grid); padding-top: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <header class="app">
+    <h1>ChronoRepo</h1>
+    <span class="tag">ICDM 2026 Demo · prototype</span>
+    <span class="tag">CPU-only · no LLM in the loop</span>
+  </header>
+  <p class="sub">A temporal knowledge graph of a repository: static structure (imports) + evolutionary coupling mined
+    from git history, queried with cheap personalized propagation.</p>
+
+  <!-- indexing -->
+  <div class="card">
+    <div class="indexbar">
+      <select id="repo">
+        <option>pallets/flask — bundled snapshot</option>
+        <option disabled>any GitHub URL — live indexing (full demo)</option>
+      </select>
+      <button class="primary" id="idxbtn">Index repository</button>
+      <span class="hint" id="idxhint"></span>
+    </div>
+    <div id="idxlog"></div>
+    <div class="chips" id="idxstats" hidden>
+      <span class="chip"><b>312</b> files</span>
+      <span class="chip"><b>5,127</b> commits mined</span>
+      <span class="chip"><b>890</b> static edges</span>
+      <span class="chip"><b>1,204</b> temporal edges</span>
+      <span class="chip">index <b>2.4 s</b></span>
+      <span class="chip">peak RSS <b>96 MB</b></span>
+      <span class="chip">incremental update <b>3.1 ms</b>/commit (p50)</span>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button data-tab="graph" class="on" disabled>Graph &amp; timeline</button>
+    <button data-tab="blast" disabled>Blast radius</button>
+    <button data-tab="issue" disabled>Issue → files</button>
+  </nav>
+
+  <!-- TAB: graph -->
+  <section class="tab on" id="tab-graph">
+    <div class="card">
+      <div class="graphctl">
+        <label><input type="checkbox" id="cbStatic" checked> static (imports)</label>
+        <label><input type="checkbox" id="cbTemp" checked> co-change (decayed)</label>
+        <label>history up to
+          <input type="range" id="year" min="2020.5" max="2026.5" step="0.25" value="2026.5">
+          <span id="yearlbl">Jul 2026</span>
+        </label>
+        <span class="chip">active co-change edges: <b id="nedges">–</b></span>
+      </div>
+      <svg id="graph" viewBox="0 0 800 560" role="img" aria-label="Repository graph: files as nodes, imports and co-change as edges"></svg>
+      <div class="legend">
+        <span><span class="sw"></span>static edge (import)</span>
+        <span><span class="sw t"></span>temporal edge (co-change, width = decayed weight)</span>
+        <span>node size = PageRank</span>
+      </div>
+      <div class="hint">Drag the slider to replay history — watch coupling appear that imports never show.
+        Click a node to inspect its blast radius.</div>
+    </div>
+  </section>
+
+  <!-- TAB: blast -->
+  <section class="tab blast" id="tab-blast">
+    <div class="card">
+      <div class="head">
+        <span>If you edit</span>
+        <select id="seed"></select>
+        <span class="hint">— which files will you likely have to touch too? (recomputed live from the graph, respects the time slider)</span>
+      </div>
+      <table class="rank">
+        <thead><tr><th>#</th><th>file</th><th>score</th><th></th><th>evidence</th></tr></thead>
+        <tbody id="blastbody"></tbody>
+      </table>
+      <div class="chips">
+        <span class="chip">propagation: <b id="blastms">–</b> in this browser</span>
+        <span class="chip">graph in RAM: <b>3.5 MB</b></span>
+        <span class="chip">lexical search can’t answer this — the link isn’t textual</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB: issue -->
+  <section class="tab" id="tab-issue">
+    <div class="card">
+      <div class="issuebar">
+        <select id="issuesel"></select>
+        <button id="locbtn">Localize</button>
+      </div>
+      <textarea id="issuetxt" spellcheck="false"></textarea>
+      <div class="cols" id="loccols" hidden>
+        <div>
+          <h3>BM25 <span class="m">— lexical baseline</span></h3>
+          <ol class="files" id="bm25list"></ol>
+          <div class="chips">
+            <span class="chip">latency <b>11 ms</b></span>
+            <span class="chip">gold in top-5: <b id="bm25r5">–</b></span>
+            <span class="chip">cost <b>$0.000</b></span>
+          </div>
+        </div>
+        <div>
+          <h3>ChronoRepo <span class="m">— grep seed + PPR over static+temporal graph</span></h3>
+          <ol class="files" id="hyblist"></ol>
+          <div class="chips">
+            <span class="chip">grep seed <b>6 ms</b> · PPR <b id="pprms">–</b></span>
+            <span class="chip">gold in top-5: <b id="hybr5">–</b></span>
+            <span class="chip">cost <b>$0.000</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="chips refstrip" id="refstrip" hidden>
+        <span class="chip">reference — LLM agent (LocAgent, lit.): finds gold · <b>~30–60 s</b> · <b>≈$0.66</b>/issue</span>
+        <span class="chip">✓ gold = files changed by the actual fix</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="note">
+    Prototype for the ICDM 2026 Demo submission. Bundled snapshot of <span class="mono">pallets/flask</span>;
+    graph queries run live in the browser, indexing figures and baseline timings are illustrative pending E1–E4 runs (see PLAN.md).
+  </footer>
+</main>
+
+<div id="tip"></div>
+
+<script>
+"use strict";
+/* ================= data: bundled pallets/flask snapshot (illustrative) ================ */
+const NODES = [
+  {id:'app',      f:'src/flask/app.py',            x:310, y:225, pr:1.00},
+  {id:'ctx',      f:'src/flask/ctx.py',            x:455, y:150, pr:0.55},
+  {id:'globals',  f:'src/flask/globals.py',        x:565, y:205, pr:0.50},
+  {id:'blue',     f:'src/flask/blueprints.py',     x:255, y:340, pr:0.65},
+  {id:'helpers',  f:'src/flask/helpers.py',        x:430, y:295, pr:0.60},
+  {id:'config',   f:'src/flask/config.py',         x:185, y:150, pr:0.40},
+  {id:'wrappers', f:'src/flask/wrappers.py',       x:585, y:315, pr:0.45},
+  {id:'sessions', f:'src/flask/sessions.py',       x:680, y:245, pr:0.40},
+  {id:'tmpl',     f:'src/flask/templating.py',     x:540, y:95,  pr:0.35},
+  {id:'json',     f:'src/flask/json/__init__.py',  x:690, y:130, pr:0.35},
+  {id:'cli',      f:'src/flask/cli.py',            x:150, y:430, pr:0.50},
+  {id:'testing',  f:'src/flask/testing.py',        x:365, y:420, pr:0.35},
+  {id:'t_basic',  f:'tests/test_basic.py',         x:545, y:430, pr:0.50},
+  {id:'t_blue',   f:'tests/test_blueprints.py',    x:395, y:490, pr:0.40},
+  {id:'t_cli',    f:'tests/test_cli.py',           x:235, y:495, pr:0.35},
+];
+const IX = Object.fromEntries(NODES.map((n,i)=>[n.id,i]));
+const SHORT = f => f.split('/').pop();
+
+const STATIC = [
+  ['app','ctx'],['app','globals'],['app','helpers'],['app','config'],['app','blue'],
+  ['app','wrappers'],['ctx','globals'],['tmpl','globals'],['sessions','wrappers'],
+  ['json','wrappers'],['cli','app'],['testing','app'],['helpers','wrappers'],
+  ['blue','helpers'],['t_basic','app'],['t_blue','blue'],['t_cli','cli'],['tmpl','helpers'],
+];
+/* c = commits per year, 2020..2026 */
+const TEMPORAL = [
+  {a:'app',b:'ctx',        c:[8,7,6,9,8,6,3]},
+  {a:'app',b:'t_basic',    c:[10,9,8,9,9,8,5]},
+  {a:'app',b:'blue',       c:[4,12,7,4,3,2,1]},
+  {a:'blue',b:'t_blue',    c:[3,10,6,4,3,1,1]},
+  {a:'sessions',b:'wrappers', c:[2,2,1,3,2,1,1]},
+  {a:'cli',b:'t_cli',      c:[3,4,3,4,3,3,1]},
+  {a:'app',b:'helpers',    c:[3,4,3,3,3,2,1]},
+  {a:'ctx',b:'globals',    c:[2,2,3,9,5,2,1]},
+  {a:'json',b:'app',       c:[0,1,6,1,1,0,0]},
+  {a:'tmpl',b:'globals',   c:[1,1,1,2,1,1,0]},
+  {a:'config',b:'app',     c:[2,2,2,2,1,1,1]},
+  {a:'sessions',b:'t_basic', c:[1,1,1,1,1,1,0]},
+  {a:'wrappers',b:'json',  c:[0,1,4,2,1,0,0]},
+];
+const DECAY = 0.9; // per year — strong enough that stale coupling visibly fades on the timeline
+
+/* Example issues: grep seeds are files whose text matches issue identifiers */
+const ISSUES = [
+  {
+    title: '#4834 — nested blueprint url_prefix ignored with subdomain',
+    text: 'Registering a nested blueprint on a parent that was registered with a subdomain silently drops the child url_prefix. register_blueprint(child, url_prefix="/v2") produces routes without the prefix when the parent has subdomain="api". Expected: prefixes compose as documented.',
+    grep: {blue: 14, app: 6, t_blue: 4},
+    grepDocs: [{f:'docs/blueprints.rst', m:9}],
+    gold: ['src/flask/blueprints.py','src/flask/app.py'],
+    bm25: ['docs/blueprints.rst','src/flask/blueprints.py','docs/api.rst',
+           'examples/tutorial/flaskr/blog.py','tests/test_blueprints.py',
+           'src/flask/helpers.py','CHANGES.rst','src/flask/app.py'],
+  },
+  {
+    title: '#5210 — SESSION_COOKIE_SAMESITE="None" not applied to Set-Cookie',
+    text: 'With SESSION_COOKIE_SAMESITE set to "None" the session cookie is emitted without a SameSite attribute, so browsers reject it in cross-site iframes. save_session should pass samesite through to set_cookie together with Secure.',
+    grep: {sessions: 11, config: 5, wrappers: 3},
+    grepDocs: [{f:'docs/config.rst', m:7}],
+    gold: ['src/flask/sessions.py','tests/test_basic.py'],
+    bm25: ['docs/config.rst','src/flask/sessions.py','CHANGES.rst',
+           'src/flask/config.py','docs/api.rst','tests/test_basic.py',
+           'src/flask/wrappers.py','docs/security.rst'],
+  },
+  {
+    title: '#5388 — flask run --cert=adhoc crashes when cryptography is missing',
+    text: 'Running flask run --cert=adhoc without the cryptography package raises TypeError instead of a clear error message. The CLI should detect the missing dependency in _validate_key / CertParamType and exit with a helpful hint.',
+    grep: {cli: 16, t_cli: 5},
+    grepDocs: [{f:'docs/cli.rst', m:8}],
+    gold: ['src/flask/cli.py','tests/test_cli.py'],
+    bm25: ['docs/cli.rst','src/flask/cli.py','docs/server.rst','CHANGES.rst',
+           'src/flask/helpers.py','tests/test_cli.py','docs/deploying/index.rst',
+           'src/flask/app.py'],
+  },
+];
+
+/* ================= graph math (this IS the method, just tiny) ================ */
+function tempWeight(e, t) {
+  let w = 0;
+  for (let i = 0; i < 7; i++) {
+    const y = 2020 + i + 0.5;
+    if (y <= t) w += e.c[i] * Math.exp(-DECAY * (t - y));
+  }
+  return w;
+}
+function buildA(t, wS, wT) {
+  const n = NODES.length;
+  const A = Array.from({length:n}, () => new Float64Array(n));
+  if (wS > 0) for (const [a,b] of STATIC) { A[IX[a]][IX[b]] += wS; A[IX[b]][IX[a]] += wS; }
+  if (wT > 0) for (const e of TEMPORAL) {
+    const w = tempWeight(e, t);
+    if (w > 0.05) { const v = wT * Math.log1p(w); A[IX[e.a]][IX[e.b]] += v; A[IX[e.b]][IX[e.a]] += v; }
+  }
+  const R = Array.from({length:n}, () => new Float64Array(n)); // row-normalized
+  for (let i = 0; i < n; i++) {
+    let s = 0; for (let j = 0; j < n; j++) s += A[i][j];
+    if (s > 0) for (let j = 0; j < n; j++) R[i][j] = A[i][j] / s;
+  }
+  return {A, R};
+}
+/* 2-step personalized propagation from a seed distribution */
+function propagate(R, seedVec) {
+  const n = R.length, p1 = new Float64Array(n), p2 = new Float64Array(n);
+  for (let i = 0; i < n; i++) if (seedVec[i] > 0)
+    for (let j = 0; j < n; j++) p1[j] += seedVec[i] * R[i][j];
+  for (let i = 0; i < n; i++) if (p1[i] > 0)
+    for (let j = 0; j < n; j++) p2[j] += p1[i] * R[i][j];
+  const out = new Float64Array(n);
+  for (let j = 0; j < n; j++) out[j] = 0.7 * p1[j] + 0.3 * p2[j];
+  return out;
+}
+function evidence(seedId, targetId, t, A) {
+  const chips = [], si = IX[seedId], ti = IX[targetId];
+  const te = TEMPORAL.find(e => (e.a===seedId&&e.b===targetId)||(e.a===targetId&&e.b===seedId));
+  if (te) {
+    const tot = te.c.reduce((s,c)=>s+c,0);
+    chips.push(`co-change ×${tot}` + (tempWeight(te,t)>0.05 ? '' : ' (decayed out)'));
+  }
+  if (STATIC.some(([a,b]) => (a===seedId&&b===targetId)||(a===targetId&&b===seedId)))
+    chips.push('import');
+  if (!chips.length) {
+    let best = -1, via = null;
+    for (let k = 0; k < NODES.length; k++) {
+      if (k===si||k===ti) continue;
+      const v = Math.min(A[si][k], A[k][ti]);
+      if (v > best && v > 0) { best = v; via = NODES[k]; }
+    }
+    if (via) chips.push(`2-hop via ${SHORT(via.f)}`);
+  }
+  return chips;
+}
+
+/* ================= UI state ================ */
+let indexed = false, selSeed = 'app';
+const $ = id => document.getElementById(id);
+const svgNS = 'http://www.w3.org/2000/svg';
+
+function curT()  { return parseFloat($('year').value); }
+function curWS() { return $('cbStatic').checked ? 1 : 0; }
+function curWT() { return $('cbTemp').checked ? 1 : 0; }
+
+/* ---- indexing simulation ---- */
+const LOG_STEPS = [
+  [200, '$ chronorepo index pallets/flask'],
+  [600, 'parsing 312 files with tree-sitter … 312/312'],
+  [1300, 'mining git history … 5,127 commits (merge/mega-commits >30 files dropped: 41)'],
+  [2000, 'building sparse matrices … 890 static · 1,204 temporal edges'],
+  [2400, '<span class="ok">✓ done in 2.4 s · peak RSS 96 MB</span>'],
+];
+$('idxbtn').addEventListener('click', runIndex);
+function runIndex() {
+  if (indexed) return;
+  $('idxbtn').disabled = true;
+  const log = $('idxlog'); log.innerHTML = '';
+  for (const [ms, line] of LOG_STEPS)
+    setTimeout(() => { log.innerHTML += line + '\n'; }, ms);
+  setTimeout(() => {
+    indexed = true;
+    $('idxstats').hidden = false;
+    document.querySelectorAll('nav.tabs button').forEach(b => b.disabled = false);
+    drawGraph(); renderBlast();
+  }, 2500);
+}
+setTimeout(runIndex, 400); // auto-start so the page comes alive
+
+/* ---- tabs ---- */
+document.querySelectorAll('nav.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b===btn));
+    document.querySelectorAll('section.tab').forEach(s => s.classList.toggle('on', s.id === 'tab-'+btn.dataset.tab));
+  });
+});
+function gotoTab(name) { document.querySelector(`nav.tabs button[data-tab=${name}]`).click(); }
+
+/* ---- graph rendering ---- */
+const tip = $('tip');
+function showTip(html, x, y) { tip.innerHTML = html; tip.style.display='block'; tip.style.left=(x+14)+'px'; tip.style.top=(y+10)+'px'; }
+function hideTip() { tip.style.display='none'; }
+
+function drawGraph() {
+  const svg = $('graph'); svg.innerHTML = '';
+  const t = curT(), showS = $('cbStatic').checked, showT = $('cbTemp').checked;
+  let active = 0, maxW = 0;
+  const weights = TEMPORAL.map(e => tempWeight(e, t));
+  for (const w of weights) if (w > 0.5) { active++; maxW = Math.max(maxW, w); }
+
+  if (showS) for (const [a,b] of STATIC) {
+    const n1 = NODES[IX[a]], n2 = NODES[IX[b]];
+    const l = document.createElementNS(svgNS, 'line');
+    l.setAttribute('x1',n1.x); l.setAttribute('y1',n1.y); l.setAttribute('x2',n2.x); l.setAttribute('y2',n2.y);
+    l.setAttribute('stroke','var(--blue)'); l.setAttribute('stroke-width','1.4'); l.setAttribute('opacity','0.40');
+    svg.appendChild(l);
+  }
+  if (showT) TEMPORAL.forEach((e, i) => {
+    const w = weights[i]; if (w <= 0.5) return;
+    const n1 = NODES[IX[e.a]], n2 = NODES[IX[e.b]];
+    const l = document.createElementNS(svgNS, 'line');
+    l.setAttribute('x1',n1.x); l.setAttribute('y1',n1.y); l.setAttribute('x2',n2.x); l.setAttribute('y2',n2.y);
+    l.setAttribute('stroke','var(--orange)'); l.setAttribute('stroke-dasharray','5 4');
+    l.setAttribute('stroke-width', String(1 + 4 * (maxW ? w/maxW : 0)));
+    l.setAttribute('opacity', String(0.35 + 0.45 * (maxW ? w/maxW : 0)));
+    l.style.cursor = 'default';
+    const tot = e.c.reduce((s,c)=>s+c,0);
+    l.addEventListener('mousemove', ev => showTip(
+      `<span class="mono">${SHORT(NODES[IX[e.a]].f)} ↔ ${SHORT(NODES[IX[e.b]].f)}</span><br>` +
+      `<span class="d">co-change ×${tot} total · decayed weight ${w.toFixed(1)}</span>`, ev.clientX, ev.clientY));
+    l.addEventListener('mouseleave', hideTip);
+    svg.appendChild(l);
+  });
+  for (const n of NODES) {
+    const g = document.createElementNS(svgNS, 'g'); g.style.cursor = 'pointer';
+    const c = document.createElementNS(svgNS, 'circle');
+    c.setAttribute('cx',n.x); c.setAttribute('cy',n.y); c.setAttribute('r', String(7 + 8*n.pr));
+    c.setAttribute('fill','var(--surface)');
+    c.setAttribute('stroke', n.id===selSeed ? 'var(--blue)' : 'var(--muted)');
+    c.setAttribute('stroke-width', n.id===selSeed ? '3' : '1.5');
+    const lab = document.createElementNS(svgNS, 'text');
+    lab.setAttribute('x',n.x); lab.setAttribute('y', n.y + 7 + 8*n.pr + 12);
+    lab.setAttribute('text-anchor','middle'); lab.setAttribute('font-size','10');
+    lab.setAttribute('fill','var(--ink-2)'); lab.textContent = SHORT(n.f);
+    g.appendChild(c); g.appendChild(lab);
+    g.addEventListener('mousemove', ev => showTip(
+      `<span class="mono">${n.f}</span><br><span class="d">PageRank ${n.pr.toFixed(2)} · click → blast radius</span>`,
+      ev.clientX, ev.clientY));
+    g.addEventListener('mouseleave', hideTip);
+    g.addEventListener('click', () => { selSeed = n.id; $('seed').value = n.id; drawGraph(); renderBlast(); gotoTab('blast'); });
+    svg.appendChild(g);
+  }
+  $('nedges').textContent = active;
+  const y = Math.floor(t), frac = t - y;
+  const mon = ['Jan','Apr','Jul','Oct'][Math.round(frac/0.25) % 4];
+  $('yearlbl').textContent = `${mon} ${y}`;
+}
+['cbStatic','cbTemp'].forEach(id => $(id).addEventListener('change', () => { drawGraph(); renderBlast(); }));
+$('year').addEventListener('input', () => { drawGraph(); renderBlast(); });
+
+/* ---- blast radius ---- */
+const seedSel = $('seed');
+for (const n of NODES) {
+  const o = document.createElement('option');
+  o.value = n.id; o.textContent = n.f;
+  seedSel.appendChild(o);
+}
+seedSel.value = selSeed;
+seedSel.addEventListener('change', () => { selSeed = seedSel.value; drawGraph(); renderBlast(); });
+
+function renderBlast() {
+  const t0 = performance.now();
+  const t = curT(), {A, R} = buildA(t, curWS(), curWT());
+  const seedVec = new Float64Array(NODES.length); seedVec[IX[selSeed]] = 1;
+  const p = propagate(R, seedVec);
+  const rows = NODES.map((n,i) => ({n, s: i===IX[selSeed] ? -1 : p[i]}))
+    .filter(r => r.s > 0.001).sort((a,b) => b.s - a.s).slice(0, 8);
+  const smax = rows.length ? rows[0].s : 1;
+  const ms = performance.now() - t0;
+  $('blastbody').innerHTML = rows.map((r, k) => {
+    const chips = evidence(selSeed, r.n.id, t, A).map(e => `<span class="ev">${e}</span>`).join('');
+    return `<tr><td class="num">${k+1}</td><td class="mono">${r.n.f}</td>` +
+      `<td class="num">${(r.s/smax).toFixed(2)}</td>` +
+      `<td class="barwrap"><div class="bar" style="width:${Math.max(3, 100*r.s/smax)}%"></div></td>` +
+      `<td>${chips}</td></tr>`;
+  }).join('');
+  $('blastms').textContent = ms.toFixed(1) + ' ms';
+}
+
+/* ---- issue localization ---- */
+const issueSel = $('issuesel');
+ISSUES.forEach((iss, i) => {
+  const o = document.createElement('option');
+  o.value = i; o.textContent = iss.title;
+  issueSel.appendChild(o);
+});
+issueSel.addEventListener('change', () => { $('issuetxt').value = ISSUES[issueSel.value].text; $('loccols').hidden = true; $('refstrip').hidden = true; });
+$('issuetxt').value = ISSUES[0].text;
+
+$('locbtn').addEventListener('click', () => {
+  const iss = ISSUES[issueSel.value];
+  const t0 = performance.now();
+  const {R} = buildA(curT(), 1, 1);
+  const seedVec = new Float64Array(NODES.length);
+  let mSum = 0; for (const m of Object.values(iss.grep)) mSum += m;
+  for (const [id, m] of Object.entries(iss.grep)) seedVec[IX[id]] = m / mSum;
+  const ppr = propagate(R, seedVec);
+  const scored = NODES.map((n,i) => ({f: n.f, s: 0.55*seedVec[i] + 0.45*ppr[i],
+    seedM: iss.grep[n.id] || 0, ppr: ppr[i]}))
+    .filter(r => r.s > 0.004).sort((a,b) => b.s - a.s);
+  for (const d of iss.grepDocs) scored.push({f: d.f, s: 0.001, seedM: d.m, ppr: 0, doc: true});
+  const hyb = scored.slice(0, 8);
+  const ms = performance.now() - t0;
+
+  const gold = new Set(iss.gold);
+  const mark = f => gold.has(f) ? '<span class="gold">✓ gold</span>' : '';
+  $('bm25list').innerHTML = iss.bm25.map(f =>
+    `<li><span class="mono">${f}</span>${mark(f)}</li>`).join('');
+  $('hyblist').innerHTML = hyb.map(r => {
+    const why = r.doc ? `grep ×${r.seedM} (docs, no graph node)` :
+      r.seedM ? `grep ×${r.seedM}` + (r.ppr > 0.01 ? ` + propagation ${r.ppr.toFixed(2)}` : '') :
+      `propagation ${r.ppr.toFixed(2)} (no lexical match)`;
+    return `<li><span class="mono">${r.f}</span>${mark(r.f)}<span class="why">${why}</span></li>`;
+  }).join('');
+  const r5 = list => `${list.slice(0,5).filter(f => gold.has(f)).length}/${iss.gold.length}`;
+  $('bm25r5').textContent = r5(iss.bm25);
+  $('hybr5').textContent  = r5(hyb.map(r => r.f));
+  $('pprms').textContent  = ms.toFixed(1) + ' ms';
+  $('loccols').hidden = false; $('refstrip').hidden = false;
+});
+</script>
+</body>
+</html>
