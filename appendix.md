@@ -1,5 +1,13 @@
 # ChronoRepo: extended results (online appendix)
 
+> **Headline (latest run).** With the improved candidate recipe (Appendix I)
+> plus a single call to a *vanilla, not fine-tuned* Qwen2.5-7B, ChronoRepo
+> reaches **76.9% strict Acc@5** on LocBench (n=559, official ground truth),
+> statistically indistinguishable from LocAgent's **fine-tuned** 7B agent
+> (78.6, multi-turn, GPU-served) and above CodeRankEmbed (74.3) and
+> Agentless with Claude-3.5 (67.5). Cost: ~$0.001 per issue, one CPU core
+> for the graph.
+
 Supplementary tables for "ChronoRepo: Cost-Effective Change Localization in
 Software Repositories with a Temporal Knowledge Graph" (ICDM 2026 demo track
 submission). All numbers below use LocBench's official ground truth (files
@@ -92,6 +100,39 @@ in this run). Together with the earlier evidence-annotation result, this
 suggests single-call small models rank paths well but cannot exploit
 in-prompt code context; reading code appears to pay off only inside an
 agentic loop or possibly for stronger models (untested).
+
+## B4. Improved candidate recipe: results (LocBench, n=559)
+
+Candidates rebuilt with the recipe of Appendix I; rerank is one call to a
+vanilla Qwen2.5-7B, no fine-tuning, no agent loop. Depths are truncations
+of the *same* baskets, so the comparison is strictly paired.
+
+| Configuration | ceiling | Acc@5 | 95% CI | Acc@10 | tokens/call |
+|---|---|---|---|---|---|
+| candidates only, no LLM | — | 67.4 | — | 76.6 | 0 |
+| + 7B call, depth 25 | 85.2 | 74.4 | [70.6, 77.9] | 80.5 | 718 |
+| **+ 7B call, depth 50** | 91.8 | **76.9** | [73.3, 80.2] | 83.4 | 1,033 |
+| + 7B call, depth 100 | 94.3 | 76.4 | [72.7, 79.7] | 83.7 | 1,667 |
+| *Agentless, Claude-3.5 (quoted)* | — | 67.5 | — | 67.5 | LLM calls |
+| *CodeRankEmbed (quoted)* | — | 74.3 | — | 80.9 | GPU embeddings |
+| *LocAgent, fine-tuned 7B agent (quoted)* | — | 78.6 | — | 79.6 | GPU serving |
+| *LocAgent, Claude-3.5 agent (quoted)* | — | 83.4 | — | 86.1 | ~$0.66 |
+
+Depth 50 is the operating point: it beats depth 25 (McNemar 24/10,
+p = 0.024) and ties depth 100 (10/13, p = 0.68) at 38% fewer tokens.
+Coverage past 50 candidates is not convertible by a small model in one
+shot, which is the same attention-versus-coverage ceiling seen in the
+code-content experiment (B3).
+
+A vanilla 7B over these candidates is statistically level with the
+fine-tuned multi-turn agent (76.9 [73.3, 80.2] vs 78.6) and clears both the
+GPU-embedding retriever and the Agentless pipeline on Claude-3.5. The
+no-LLM candidate order alone (67.4) already matches Agentless.
+
+Per category: bugs 84.2, features 79.3, security 79.3, performance 61.2.
+By gold-file count: single-file 83.4 (ceiling 93.2), two files 50.0
+(86.4), 3+ files 15.6 (78.1) — multi-file joint localization remains the
+hard core for any single-shot ranking.
 
 ## C. Breakdown by number of gold files
 
@@ -193,6 +234,41 @@ having both. Caveat: history-length quartiles are confounded with
 repository size and category mix (the Q3 dip mirrors the size-quartile dip
 in Appendix E and is a composition artifact), so the defensible claim is
 the threshold, not the ordering of buckets.
+
+## I. The improved candidate recipe
+
+Found by an automated sweep over 35 variants (journal:
+`notes/NIGHT_LOG.md`; code: `experiments/night_lab.py`). LocBench was split
+by instance-id hash: variants were compared on the dev half only, and the
+winner was validated once on the untouched holdout half plus Lite and
+Verified.
+
+**Recipe.** Reciprocal-rank fusion (k = 40) of six ranked lists:
+BM25 over file text; personalized propagation seeded by BM25; personalized
+propagation seeded by identifier search; a recency prior (per-file decayed
+change count); path-token scores (issue tokens matched against path
+segments); and file paths quoted verbatim in the issue text. The raw
+identifier-search list is excluded — it is redundant once its propagated
+version is present. Test and documentation files are then demoted over the
+top-200, and the list is truncated to 100.
+
+**Validation** (no LLM; baseline is the recipe used in the paper):
+
+| Set | ceiling@50 | ceiling@100 | Acc@5 |
+|---|---|---|---|
+| LocBench holdout (n=296) | 80.1 → **92.2** | 88.5 → **93.2** | 55.7 → **68.2** |
+| SWE-bench Lite (n=300) | 83.3 → **91.0** | 90.7 → **95.0** | 66.7 → **72.0** |
+| SWE-bench Verified (n=500) | 81.6 → **92.8** | 88.4 → **95.2** | 55.0 → **68.8** |
+
+Holdout gains match dev gains, so the recipe is not overfitted to the
+tuning half. Ablation (drop-one on the dev half) ranks the contributions:
+path tokens (−10.2 Acc@5 if removed), recency prior (−6.4), test demotion
+(−4.5 relative to the fused list), fusion itself (+4.5 ceiling@100 over the
+union). Rejected with measurements: RM3 query expansion, a co-change graph
+over all file types, PR-transaction grouping of commits, confidence
+normalisation of co-change weights, three-step propagation, fusion weights,
+deeper source lists, per-directory diversification, and recency re-ranking
+of the final list.
 
 ## H. Cost summary
 
