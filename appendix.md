@@ -5,8 +5,9 @@
 > reaches **76.9% strict Acc@5** on LocBench (n=559, official ground truth),
 > statistically indistinguishable from LocAgent's **fine-tuned** 7B agent
 > (78.6, multi-turn, GPU-served) and above CodeRankEmbed (74.3) and
-> Agentless with Claude-3.5 (67.5). Cost: ~$0.001 per issue, one CPU core
-> for the graph.
+> Agentless with Claude-3.5 (67.5). The same pipeline scores 80.0 on
+> SWE-bench Lite and 77.0 on Verified. Cost: ~$0.001 per issue, one CPU
+> core for the graph.
 
 Supplementary tables for "ChronoRepo: Cost-Effective Change Localization in
 Software Repositories with a Temporal Knowledge Graph" (ICDM 2026 demo track
@@ -133,6 +134,21 @@ Per category: bugs 84.2, features 79.3, security 79.3, performance 61.2.
 By gold-file count: single-file 83.4 (ceiling 93.2), two files 50.0
 (86.4), 3+ files 15.6 (78.1) — multi-file joint localization remains the
 hard core for any single-shot ranking.
+
+## B5. Improved recipe on SWE-bench (depth 50, one vanilla 7B call)
+
+| Set | candidates only | + one 7B call | 95% CI | Acc@10 | ceiling@50 |
+|---|---|---|---|---|---|
+| SWE-bench Lite (n=300) | 72.0 | **80.0** | [75.1, 84.1] | 83.3 | 91.0 |
+| SWE-bench Verified (n=500) | 68.8 | **77.0** | [73.1, 80.5] | 83.0 | 92.8 |
+| LocBench (n=559) | 67.4 | **76.9** | [73.3, 80.2] | 83.4 | 91.8 |
+
+The LLM rung adds a near-constant +8 to +9.5 points on all three
+benchmarks, and the end-to-end figure lands in a narrow 77–80 band, so the
+result is a property of the pipeline rather than of one benchmark. For
+reference on Lite, LocAgent with Claude-3.5 scores 93.7 under our
+reimplementation of their metric (their released per-instance predictions),
+so a ~14-point gap to a frontier agent remains there.
 
 ## C. Breakdown by number of gold files
 
