@@ -476,9 +476,26 @@ given good candidates, is recognition rather than reasoning.
 |---|---|---|---|---|
 | Kimi K2-0905 | **82.8** | [79.5, 85.7] | **86.6** | 988 |
 | Qwen3-Coder | 81.0 | [77.6, 84.1] | 86.4 | 1082 |
+| Qwen3-Coder (480B-A35B) | 81.0 | [77.6, 84.1] | 86.4 | 1082 |
+| MiniMax-M2.7 | 80.9 | [77.4, 83.9] | 85.3 | 1491 |
+| GLM-4.7 | 80.1 | [76.6, 83.2] | 84.8 | 2347 |
 | Qwen2.5-7B | 76.9 | [73.3, 80.2] | 83.4 | 1033 |
 | *LocAgent + Claude-3.5 agent (quoted)* | *83.4* | — | *86.1* | multi-turn |
 | *LocAgent + fine-tuned 7B agent (quoted)* | *78.6* | — | *79.6* | multi-turn |
+
+No open model in the pool exceeds 83.4 at Acc@5. Kimi K2 ties it (its 95%
+CI covers the target) and exceeds it at Acc@10. Note the regression from
+screening to full evaluation: four models were tied at 82.5 on the
+80-instance subset, but on all 559 they spread over 80.1 to 82.8, so
+subset screening ranks candidates but does not settle differences of a few
+points.
+
+**Ensembling does not help at Acc@5.** Reciprocal-rank fusion of the Kimi
+and Qwen3-Coder outputs gives 82.3, below Kimi alone (82.8); adding the 7B
+or the candidate order lowers it further to 81.0 and 79.2. At Acc@10 the
+fusion does help, reaching 87.8 against 86.6 for Kimi alone and 86.1 for
+the Claude-3.5 agent, which is the configuration to use when a shortlist of
+ten is acceptable.
 
 Exact McNemar against the 7B: Kimi 40/7 (p < 1e-4), Qwen3-Coder 35/12
 (p = 0.001). Kimi versus Qwen3-Coder: 20/10, p = 0.099, not significant.
