@@ -286,6 +286,77 @@ normalisation of co-change weights, three-step propagation, fusion weights,
 deeper source lists, per-directory diversification, and recency re-ranking
 of the final list.
 
+## J. Full ablation
+
+Pooled over both LocBench halves (n=559, official ground truth, strict
+Acc@5 of the candidate ranking with no LLM; full method 67.4, ceiling@50
+91.8). Each row removes or changes one thing; $p$ from exact McNemar
+against the full method, with win/loss counts. Reproduce with
+`experiments/ablation.py`. The recipe was selected on the dev half only,
+and the holdout-only numbers (n=296, in
+`results/ablation/ablation_holdout.jsonl`) agree with the pooled ones.
+
+**A. Candidate sources (drop one)**
+
+| Removed | ceiling@50 | Acc@5 | Δ | win/loss | p |
+|---|---|---|---|---|---|
+| path tokens | 89.6 | 60.3 | −7.2 | 45/5 | <0.0001 |
+| graph propagation, both seeds | 91.9 | 64.4 | −3.0 | 37/20 | 0.033 |
+| recency prior | 91.1 | 64.8 | −2.7 | 28/13 | 0.028 |
+| test/doc demotion | 88.2 | 64.9 | −2.5 | 17/3 | 0.003 |
+| paths quoted in the issue | 91.8 | 66.4 | −1.1 | 6/0 | 0.031 |
+| raw BM25 list | 91.9 | 66.9 | −0.5 | 16/13 | 0.711 |
+| propagation, BM25 seed only | 91.9 | 67.6 | +0.2 | 11/12 | 1.000 |
+| propagation, identifier seed only | 91.2 | 67.1 | −0.4 | 13/11 | 0.839 |
+
+**B. Graph layers** (α is the weight of the import layer)
+
+| Configuration | Acc@5 | Δ | p |
+|---|---|---|---|
+| imports only (α=1) | 67.6 | +0.2 | 1.000 |
+| co-change only (α=0) | 67.1 | −0.4 | 0.625 |
+| α=0.5 | 67.6 | +0.2 | 1.000 |
+| α=0.75 | 68.2 | +0.7 | 0.219 |
+
+**C. Temporal decay**: λ=0 gives 67.1, λ=1/365 gives 67.4, λ=1/30 gives
+67.6, against 67.4 at the default λ=1/90 (all p ≥ 0.5).
+
+**D. Propagation**: 1, 2, 3 and 10 iterations all give 67.4–67.6
+(all p = 1.0); restart 0.7 gives 67.6, restart 0.3 gives 66.7 (p = 0.29).
+A single iteration therefore suffices, which is a 10× compute saving in the
+propagation step; the released code keeps 10 iterations because all
+reported numbers were produced with it.
+
+**E. Fusion**
+
+| Mechanism | ceiling@50 | Acc@5 | Δ | p |
+|---|---|---|---|---|
+| fixed-cap union (the earlier recipe) | 86.4 | 57.6 | −9.8 | <0.0001 |
+| sum of normalized scores | 92.1 | 66.0 | −1.4 | 0.243 |
+| RRF k=20 | 92.3 | 66.2 | −1.3 | 0.189 |
+| RRF k=80 | 91.2 | 66.5 | −0.9 | 0.424 |
+
+**Reading.** Six components contribute significantly; the two largest are
+the fusion mechanism and the path-token list, both larger than the graph's
+own marginal contribution. The redundancy pattern is systematic: any single
+source whose signal is also carried by another (raw BM25 under its
+propagated version, either propagation seed alone) can be removed for free,
+while removing a signal with no substitute (path tokens, both propagations
+together, recency) costs accuracy. Every hyper-parameter is inert within
+the ranges tested, so the method requires no per-repository tuning.
+
+**On the temporal layer.** The ablation qualifies the motivation honestly.
+For issue→file localization the two layers are interchangeable (67.6 vs
+67.1), and this holds outside the fusion too: on the full grid the
+history-only and import-only configurations score 52.6 and 53.5 strict
+Acc@5 (McNemar 11/16, p = 0.44), despite their neighbourhoods overlapping
+by a median Jaccard below 0.15. What is not interchangeable is the graph
+itself: against plain BM25 it wins 104 instances and loses 0 (p < 1e-30).
+The case for the temporal layer specifically rests on two other legs: the
+impact-set task, where it beats the static layer 0.577 vs 0.396 R@10, and
+cost, since it is mined from commit metadata with no parser and therefore
+transfers to any language at no engineering cost.
+
 ## H. Cost summary
 
 One CPU core (Windows 10, 12-core machine, 48 GB RAM, no GPU): median full
