@@ -461,6 +461,14 @@ Reproduce with `experiments/model_bakeoff.py`.
 | Llama-3.3-70B-Instruct | yes | 76.2 | [65.9, 84.2] |
 | Qwen3-Next-80B-A3B | yes | 75.0 | [64.5, 83.2] |
 | Qwen2.5-72B-Instruct | yes | 75.0 | [64.5, 83.2] |
+| DeepSeek-chat-v3.1 | yes | 77.5 | [67.2, 85.3] |
+| Qwen3-32B | yes | 76.2 | [65.9, 84.2] |
+| Qwen3-235B-A22B **thinking** | yes | 71.2 | [60.5, 80.0] |
+
+The thinking variant is the clearest negative result of the bake-off: ten
+points below its own non-thinking sibling (81.2) while spending 3284 tokens
+per call against 1057. Extended deliberation actively hurts a task that,
+given good candidates, is recognition rather than reasoning.
 
 **Full LocBench (n=559, strict)**
 
