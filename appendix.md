@@ -376,6 +376,73 @@ is not recoverable by any reranker (−4.7, significant). The practical rule
 for pipelines of this shape: spend effort on what enters the basket, not on
 how it is ordered inside it.
 
+## K. Material moved here from the paper
+
+The demo track allows four pages; the following content was cut from the
+submission for space and is preserved here in full.
+
+### K.1 System architecture
+
+Indexing is a single pass of `git log --numstat` over a bare clone
+(commits touching more than 30 files are dropped as bulk edits), followed
+by batched `cat-file` retrieval of the blobs of the target revision, parsed
+into import edges. Results are cached per blob hash, so re-indexing after a
+commit re-parses only changed blobs. Both graph layers live in memory as
+row-normalized sparse adjacency, a few MB per repository:
+a static layer `S` (importer to imported) and a temporal layer `T` (files
+co-changed in a commit, weight `sum exp(-lambda * age)`). Queries run
+personalized PageRank over `alpha*S + (1-alpha)*T` from a seed
+distribution, and the resulting ranking is fused with the lexical, path and
+recency lists (Appendix I). The web UI exposes three views over the same
+index: graph timeline, impact set, and issue-to-files.
+
+### K.2 Layer orthogonality figure
+
+For every file we compared its top-10 neighbours in the static versus the
+temporal layer. Median Jaccard overlap is below 0.15 on 9 of 12 projects
+(scikit-learn and matplotlib 0.00, django 0.07, sympy 0.08, xarray 0.13,
+flask 0.23, seaborn 0.25, requests 0.33). The layers therefore encode
+substantially different relations, which motivated mixing them; the
+ablation (Appendix J) shows the mixture is nonetheless not better than
+either layer alone for issue-to-file localization, while the temporal layer
+dominates for the impact-set task. The figure is reproducible with
+`paper/make_figures.py`.
+
+### K.3 Per-category figure (LocBench)
+
+R@10 of the graph configuration against BM25, by issue category:
+bugs 0.513 -> 0.617 (+10.4), features 0.476 -> 0.598 (+12.2), performance
+0.489 -> 0.590 (+10.0), security 0.491 -> 0.698 (+20.7). The security gain
+is the largest, which is the opposite of what the first (patch-file) ground
+truth suggested, and is explained by Appendix A: security fixes often add
+files, and those are not localization targets under the official ground
+truth.
+
+### K.4 Evaluation under the CodeScout F1 protocol
+
+CodeScout evaluates file localization on SWE-bench Verified with
+variable-size prediction sets and macro F1. We adopted their protocol
+unchanged: the prediction set is every file scoring at least
+`theta * max`, capped at 5, with `theta` selected on Lite only and applied
+blind to Verified.
+
+| Method | Precision | Recall | F1 |
+|---|---|---|---|
+| BM25 with the same thresholding (ours) | 17.2 | 25.4 | 18.8 |
+| ChronoRepo, no LLM (ours) | 32.6 | 44.6 | **35.2** |
+| Agentless + Qwen2.5-32B (quoted) | 25.6 | 78.9 | 35.4 |
+| LocAgent + Qwen2.5-32B (quoted) | 34.2 | 79.4 | 44.2 |
+| CodeScout-1.7B (quoted) | 58.4 | 54.3 | 55.5 |
+| CodeScout-14B (quoted) | 71.0 | 68.7 | 68.6 |
+| Claude-Sonnet-4.5, best scaffold (quoted) | 84.5 | 82.9 | 82.0 |
+
+A training-free CPU pipeline is level with the Agentless pipeline driving a
+32B model (35.2 vs 35.4) at zero inference cost, with a much better
+precision/recall balance, but well short of RL-trained search agents. This
+was run before the improved candidate recipe; the hypothesis that the
+method would match an RL-trained 1.7B model under this protocol was
+therefore rejected, and we record it as such.
+
 ## H. Cost summary
 
 One CPU core (Windows 10, 12-core machine, 48 GB RAM, no GPU): median full
