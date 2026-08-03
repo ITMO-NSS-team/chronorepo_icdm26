@@ -443,6 +443,57 @@ was run before the improved candidate recipe; the hypothesis that the
 method would match an RL-trained 1.7B model under this protocol was
 therefore rejected, and we record it as such.
 
+## L. Which model to put in the single call
+
+All models rerank the *same* candidate baskets (final recipe, top 50), one
+call, temperature 0, no agent loop. Stage 1 screens on a fixed random
+subset of 80 LocBench instances; the two leaders were then run on all 559.
+Reproduce with `experiments/model_bakeoff.py`.
+
+**Stage 1 (n=80, strict Acc@5)**
+
+| Model | open weights | Acc@5 | 95% CI |
+|---|---|---|---|
+| Qwen3-Coder (480B-A35B) | yes | 82.5 | [72.7, 89.3] |
+| Kimi K2-0905 (1T-A32B) | yes | 82.5 | [72.7, 89.3] |
+| Qwen3-235B-A22B-2507 | yes | 81.2 | [71.3, 88.3] |
+| Qwen2.5-7B-Instruct | yes | 77.5 | [67.2, 85.3] |
+| Llama-3.3-70B-Instruct | yes | 76.2 | [65.9, 84.2] |
+| Qwen3-Next-80B-A3B | yes | 75.0 | [64.5, 83.2] |
+| Qwen2.5-72B-Instruct | yes | 75.0 | [64.5, 83.2] |
+
+**Full LocBench (n=559, strict)**
+
+| Model | Acc@5 | 95% CI | Acc@10 | mean tokens |
+|---|---|---|---|---|
+| Kimi K2-0905 | **82.8** | [79.5, 85.7] | **86.6** | 988 |
+| Qwen3-Coder | 81.0 | [77.6, 84.1] | 86.4 | 1082 |
+| Qwen2.5-7B | 76.9 | [73.3, 80.2] | 83.4 | 1033 |
+| *LocAgent + Claude-3.5 agent (quoted)* | *83.4* | — | *86.1* | multi-turn |
+| *LocAgent + fine-tuned 7B agent (quoted)* | *78.6* | — | *79.6* | multi-turn |
+
+Exact McNemar against the 7B: Kimi 40/7 (p < 1e-4), Qwen3-Coder 35/12
+(p = 0.001). Kimi versus Qwen3-Coder: 20/10, p = 0.099, not significant.
+
+**Reading.** An open-weights model in a single call reaches 82.8 against
+83.4 for the best published agent, a difference well inside our confidence
+interval, and exceeds it at Acc@10 (86.6 vs 86.1). Cost per issue is under
+$0.003 against roughly $0.66, and there is no agent loop, no fine-tuning
+and no GPU on our side beyond whatever serves the model.
+
+Size alone does not predict quality here: Qwen2.5-72B and Qwen3-Next-80B
+both scored below the 7B, while the two large code-oriented mixture-of-
+experts models led. With good candidates the task is closer to recognition
+than to reasoning, which is consistent with the code-content and evidence
+ablations (B3) showing that extra context does not help small models.
+
+Practical failures encountered: `deepseek/deepseek-v3.1` is not a valid
+OpenRouter id (400 on every call; the served ids are
+`deepseek-chat-v3.1` and `deepseek-v3.1-terminus`), and thinking models
+such as Qwen3-32B return `content: null` with the answer in a separate
+`reasoning` field and need a larger token budget. Both are handled in the
+current `run_rerank.py`.
+
 ## H. Cost summary
 
 One CPU core (Windows 10, 12-core machine, 48 GB RAM, no GPU): median full

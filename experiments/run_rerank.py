@@ -77,17 +77,19 @@ def call_llm(key, prompt, retries=4):
         "messages": [{"role": "system", "content": SYSTEM},
                      {"role": "user", "content": prompt}],
         "temperature": 0.0,
-        "max_tokens": 400,
+        "max_tokens": 1500,   # thinking models spend budget before answering
     }).encode()
     for attempt in range(retries):
         try:
             req = urllib.request.Request(URL, data=body, headers={
                 "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=180) as r:
+            with urllib.request.urlopen(req, timeout=300) as r:
                 payload = json.load(r)
-            return payload["choices"][0]["message"]["content"], payload.get(
-                "usage", {})
+            msg = payload["choices"][0]["message"]
+            # thinking models may put the answer only in `reasoning`
+            text = msg.get("content") or msg.get("reasoning") or ""
+            return text, payload.get("usage", {})
         except Exception as e:
             if attempt == retries - 1:
                 raise
