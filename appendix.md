@@ -357,6 +357,25 @@ impact-set task, where it beats the static layer 0.577 vs 0.396 R@10, and
 cost, since it is mined from commit metadata with no parser and therefore
 transfers to any language at no engineering cost.
 
+
+**End-to-end ablation (through the 7B call, holdout n=296).** Candidate-level
+deltas do not transfer uniformly to the final number:
+
+| Configuration | candidates Acc@5 | + 7B Acc@5 | Δ end-to-end | p |
+|---|---|---|---|---|
+| full | 68.2 | 78.4 | — | — |
+| without path tokens | 61.8 | 77.0 | −1.4 | 0.455 |
+| without graph propagation | 64.9 | 76.0 | −2.4 | 0.189 |
+| fixed-cap union instead of fusion | 59.8 | 73.6 | −4.7 | 0.013 |
+
+The pattern separates two kinds of contribution. Path tokens mostly improve
+*ordering*, and a reranker absorbs most of their removal (−7.2 at candidate
+level, −1.4 end to end, not significant). Rank fusion mostly improves
+*coverage*, lowering the ceiling by 5.4 points when removed, and that loss
+is not recoverable by any reranker (−4.7, significant). The practical rule
+for pipelines of this shape: spend effort on what enters the basket, not on
+how it is ordered inside it.
+
 ## H. Cost summary
 
 One CPU core (Windows 10, 12-core machine, 48 GB RAM, no GPU): median full
