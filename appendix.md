@@ -474,28 +474,41 @@ given good candidates, is recognition rather than reasoning.
 
 | Model | Acc@5 | 95% CI | Acc@10 | mean tokens |
 |---|---|---|---|---|
-| Kimi K2-0905 | **82.8** | [79.5, 85.7] | **86.6** | 988 |
-| Qwen3-Coder | 81.0 | [77.6, 84.1] | 86.4 | 1082 |
+| Kimi K2-0905 | **82.8** | [79.5, 85.7] | 86.6 | 988 |
+| GLM-5.1 | **82.8** | [79.5, 85.7] | **86.9** | 1303 |
+| DeepSeek V4 Pro | 81.2 | [77.8, 84.2] | 85.3 | 1802 |
 | Qwen3-Coder (480B-A35B) | 81.0 | [77.6, 84.1] | 86.4 | 1082 |
 | MiniMax-M2.7 | 80.9 | [77.4, 83.9] | 85.3 | 1491 |
+| DeepSeek V4 Flash | 80.9 | [77.4, 83.9] | 86.0 | 1495 |
 | GLM-4.7 | 80.1 | [76.6, 83.2] | 84.8 | 2347 |
 | Qwen2.5-7B | 76.9 | [73.3, 80.2] | 83.4 | 1033 |
 | *LocAgent + Claude-3.5 agent (quoted)* | *83.4* | — | *86.1* | multi-turn |
 | *LocAgent + fine-tuned 7B agent (quoted)* | *78.6* | — | *79.6* | multi-turn |
 
-No open model in the pool exceeds 83.4 at Acc@5. Kimi K2 ties it (its 95%
-CI covers the target) and exceeds it at Acc@10. Note the regression from
+No open model in the pool exceeds 83.4 at Acc@5 on its own. Two of them,
+Kimi K2 and GLM-5.1, tie it (their 95% CI covers the target) and exceed it
+at Acc@10. Note the regression from
 screening to full evaluation: four models were tied at 82.5 on the
 80-instance subset, but on all 559 they spread over 80.1 to 82.8, so
 subset screening ranks candidates but does not settle differences of a few
 points.
 
-**Ensembling does not help at Acc@5.** Reciprocal-rank fusion of the Kimi
-and Qwen3-Coder outputs gives 82.3, below Kimi alone (82.8); adding the 7B
-or the candidate order lowers it further to 81.0 and 79.2. At Acc@10 the
-fusion does help, reaching 87.8 against 86.6 for Kimi alone and 86.1 for
-the Claude-3.5 agent, which is the configuration to use when a shortlist of
-ten is acceptable.
+**Ensembling: mostly no, once yes.** Reciprocal-rank fusion of the Kimi and
+Qwen3-Coder outputs gives 82.3 at Acc@5, *below* Kimi alone (82.8); adding
+the 7B or the candidate order lowers it further to 81.0 and 79.2. Fusing
+the two co-leaders with Qwen3-Coder reaches 83.4, exactly the LocAgent
+figure, at 87.3 Acc@10. We flag that last number as weak evidence: the
+configuration was chosen after seeing results on the same 559 instances,
+among roughly five fusions tried, and the spread between them sits inside
+the noise band. The robust claims are the single-model ones. At Acc@10
+fusion helps consistently (87.3 to 87.8 against 86.1 for the agent), which
+is the configuration to use when a shortlist of ten is acceptable.
+
+The two co-leaders agree on the top-ranked file in 86.2% of instances, so
+their errors are largely shared, which is why fusion buys little. DeepSeek
+V4 Pro spends 1802 tokens per call, nearly double the leaders, and lands
+1.6 points lower: a fourth data point for deliberation not paying off on
+this task.
 
 Exact McNemar against the 7B: Kimi 40/7 (p < 1e-4), Qwen3-Coder 35/12
 (p = 0.001). Kimi versus Qwen3-Coder: 20/10, p = 0.099, not significant.
