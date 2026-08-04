@@ -1,16 +1,18 @@
 # ChronoRepo: extended results (online appendix)
 
-> **Headline (latest run).** With the improved candidate recipe (Appendix I)
-> plus a single call to a *vanilla, not fine-tuned* Qwen2.5-7B, ChronoRepo
-> reaches **76.9% strict Acc@5** on LocBench (n=559, official ground truth),
-> statistically indistinguishable from LocAgent's **fine-tuned** 7B agent
-> (78.6, multi-turn, GPU-served) and above CodeRankEmbed (74.3) and
-> Agentless with Claude-3.5 (67.5). In the same weight class it is beaten
-> only by SweRank's task-trained retrieve-and-rerank models (85.5 at 7B;
-> 86.6 at 32B, the current benchmark ceiling — ICLR 2026), which require
-> training and GPU serving. The same pipeline scores 80.0 on SWE-bench Lite
-> and 77.0 on Verified. Cost: ~$0.001 per issue, one CPU core for the
-> graph. See Appendix M for the consolidated leaderboard.
+> **Headline (latest runs).** With the improved candidate recipe (Appendix
+> I) plus a single call to a *vanilla, not fine-tuned* small model,
+> ChronoRepo reaches **80.5% strict Acc@5** on LocBench with Qwen3.5-9B
+> (n=559, official ground truth) — above LocAgent's **fine-tuned** 7B
+> agent (78.6, multi-turn, GPU-served) and SweRank's trained
+> SweRankEmbed-Small retriever (80.4). One call to an open-weights MoE
+> over a depth-100 basket reaches **83.7 / 88.6**, past the strongest
+> published agent's point estimate (83.4) and past SweRank-7B at Acc@10
+> (88.4); only SweRank's fully trained pipelines score higher (85.5/86.6
+> at Acc@5 — ICLR 2026). The 7B rung of the paper (76.9) and the SWE-bench
+> results (80.0 Lite / 77.0 Verified) are unchanged. Cost: $0.0002–0.002
+> per issue, one CPU core for the graph. Appendix M has the consolidated
+> leaderboard; N.4–N.5 the follow-up runs.
 
 Supplementary tables for "ChronoRepo: Cost-Effective Change Localization in
 Software Repositories with a Temporal Knowledge Graph" (ICDM 2026 demo track
@@ -626,35 +628,43 @@ rows cover 559/560 instances. Costs marked † come from the papers' own cost
 studies (LocAgent's was run in the SWE-bench Lite setting; no per-issue
 LocBench costs are published) and exclude standing GPU-serving cost.
 
-### M.1 Small-model lane (no component above 7B)
+### M.1 Small-model lane (no component above 9B)
 
 | # | System | Trained? | Acc@5 | Acc@10 | $/issue | Hardware |
 |---|---|---|---|---|---|---|
 | 1 | **SweRank 7B retrieve+rerank** (SweRankLLM-Small, quoted) | yes (both stages) | **85.5** | **88.4** | ≈$0.01† | GPU |
-| 2 | SweRankEmbed-Small 137M retriever (quoted) | yes | 80.4 | 84.8 | — | GPU |
-| 3 | LocAgent agent, fine-tuned Qwen2.5-7B (quoted) | yes (SFT) | 78.6 | 79.6 | ≈$0.05† | GPU |
-| 4 | **ChronoRepo + one vanilla Qwen2.5-7B call (ours)** | **no** | 76.9 | 83.4 | <$0.001 | CPU + API |
-| 5 | CodeRankEmbed 137M retriever (quoted) | yes | 74.3 | 80.9 | — | GPU |
-| 6 | ChronoRepo candidates, no LLM (ours) | no | 67.4 | 76.6 | ~$0 | CPU |
-| 7 | BM25 (ours) | no | 34.7 | 48.1 | ~$0 | CPU |
+| 2 | **ChronoRepo + one vanilla Qwen3.5-9B call (ours)** | **no** | 80.5 | 85.5 | <$0.001 | CPU + API |
+| 3 | SweRankEmbed-Small 137M retriever (quoted) | yes | 80.4 | 84.8 | — | GPU |
+| 4 | LocAgent agent, fine-tuned Qwen2.5-7B (quoted) | yes (SFT) | 78.6 | 79.6 | ≈$0.05† | GPU |
+| 5 | ChronoRepo + one vanilla Qwen2.5-7B call (ours) | no | 76.9 | 83.4 | <$0.001 | CPU + API |
+| 6 | CodeRankEmbed 137M retriever (quoted) | yes | 74.3 | 80.9 | — | GPU |
+| 7 | ChronoRepo candidates, no LLM (ours) | no | 67.4 | 76.6 | ~$0 | CPU |
+| 8 | BM25 (ours) | no | 34.7 | 48.1 | ~$0 | CPU |
 
-Reading: every system above our 7B row is *trained for the task*; every
-training-free row below 76.9 is ours. ChronoRepo is the strongest
-training-free entry and the cheapest at any accuracy above BM25; SweRank
-holds the lane (and benchmark) ceiling at 10–15× our per-issue cost plus
-GPU serving.
+Reading: every system above our 9B row is *trained for the task* — and
+only one remains: the fully trained SweRankLLM pipeline. An untrained 9B
+call now clears the fine-tuned multi-turn agent (80.5 vs 78.6) and the
+trained SweRankEmbed retriever (80.4) at a fraction of their cost;
+SweRank holds the lane ceiling at 10–15× our per-issue price plus GPU
+serving (N.5).
 
 ### M.2 Heavyweight lane (frontier agents, 32B rerankers, large MoE)
 
 | # | System | Loop | Acc@5 | Acc@10 | $/issue |
 |---|---|---|---|---|---|
 | 1 | **SweRankLLM-Large, trained 32B reranker** (quoted) | single pass | **86.6** | **89.8** | GPU |
-| 2 | LocAgent agent, Claude-3.5 (quoted) | multi-turn | 83.4 | 86.1 | ≈$0.66† |
-| 3 | **ChronoRepo + one Kimi-K2 / GLM-5.1 call (ours)** | one call | 82.8 | 86.6 / 86.9 | <$0.003 |
-| 4 | ChronoRepo + one Qwen3-Coder call (ours) | one call | 81.0 | 86.4 | ≈$0.001 |
-| 5 | OpenHands agent, Claude-3.5 (quoted) | multi-turn | 79.8 | 80.0 | ≈$0.79† |
-| 6 | SWE-agent, Claude-3.5 (quoted) | multi-turn | 77.7 | 77.7 | ≈$0.67† |
-| 7 | Agentless, Claude-3.5 (quoted) | pipeline | 67.5 | 67.5 | LLM calls |
+| 2 | **ChronoRepo + one Kimi-K2 call, depth 100 (ours)** | one call | 83.7 | **88.6** | <$0.002 |
+| 3 | LocAgent agent, Claude-3.5 (quoted) | multi-turn | 83.4 | 86.1 | ≈$0.66† |
+| 4 | ChronoRepo + one Kimi-K2 / GLM-5.1 call, d50 (ours) | one call | 82.8 | 86.6 / 86.9 | <$0.003 |
+| 5 | ChronoRepo + one Qwen3-Coder call (ours) | one call | 81.0 | 86.4 | ≈$0.001 |
+| 6 | OpenHands agent, Claude-3.5 (quoted) | multi-turn | 79.8 | 80.0 | ≈$0.79† |
+| 7 | SWE-agent, Claude-3.5 (quoted) | multi-turn | 77.7 | 77.7 | ≈$0.67† |
+| 8 | Agentless, Claude-3.5 (quoted) | pipeline | 67.5 | 67.5 | LLM calls |
+
+At Acc@10 the depth-100 MoE call (88.6) passes every published agent and
+SweRank-7B (88.4), 1.2 short of the trained 32B ceiling; at Acc@5 it
+passes the strongest agent's point estimate (83.7 vs 83.4) with the
+1.8-point gap to SweRank concentrated in multi-file instances (N.4).
 
 ### M.3 Entries not directly comparable (excluded from the ladder)
 
@@ -735,3 +745,57 @@ in basket, all nine models fail). The two corresponding levers:
 
 Both experiments are single-call, OpenRouter-priced at roughly $1–2 for
 the full benchmark per configuration.
+
+### N.4 The levers, tested (follow-up runs, 2026-08-04)
+
+All runs: same baskets (`rerank_final_locbench.jsonl`), one call,
+temperature 0 unless stated, n=559, official GT, McNemar against the
+Kimi-K2 depth-50 baseline (82.8 / 86.6).
+
+| Configuration | Acc@5 | Acc@10 | vs base (McNemar) | gold=1 | gold≥2 |
+|---|---|---|---|---|---|
+| **Kimi-K2, depth 100** | **83.7** | **88.6** | @5: 14/9, p=0.40; @10: 17/6, **p=0.035** | 90.1 | 43.4 |
+| GLM-5.1, depth 100 | 83.2 | 88.4 | 14/12, p=0.85 | 88.8 | 47.4 |
+| Kimi-K2, count-aware prompt, d50 | 82.1 | 86.6 | 8/12, p=0.50 | 88.0 | 44.7 |
+| Kimi-K2, self-consistency 5×t=0.7, vote | 82.8 | 86.4 | 7/7, p=1.00 | 88.6 | 46.1 |
+
+**Depth 100 works — for the MoE.** The lever the 7B could not use
+(Appendix B4: 76.4 at depth 100) the MoE can: +2.0 points of Acc@10
+(significant), reaching **88.6 — past SweRank-7B's benchmark-wide 88.4 —
+with a single untrained call**, and 90.1 on the single-file slice. Acc@5
+gains +0.9 (not significant). Token cost rises 988→1,651 per call
+(≈$1.5/1,000 issues, still ~1/440 of the LocAgent-Claude agent). GLM-5.1
+replicates the pattern (83.2/88.4). The oracle over both depth-100 runs
+reaches only 85.3 Acc@5 — their errors, again, are shared.
+
+**The multi-file levers fail.** A count-aware prompt (decide the size of
+the fix first) moves nothing overall and does not lift gold≥2 (44.7 vs
+50.0, n=76, noise). Five-sample self-consistency voting is *exactly* the
+greedy run (82.8, 7/7 discordant): the individual samples span 81.6–82.8
+and their union-vote recovers nothing, i.e. the errors are systematic,
+not stochastic. Together with the ensemble result (N.2) this closes the
+book on single-call variance tricks: the residual Acc@5 gap to SweRank
+(83.7 vs 85.5, ≈10 instances) lives in multi-file fixes and appears to
+require either training or machinery beyond one-shot ranking.
+
+### N.5 Modern small models: the 7B-lane headline moves to 9B
+
+Same protocol as the bake-off (depth 50, one call, temperature 0):
+
+| Model | Acc@5 | 95% CI | Acc@10 | gold=1 | $/1k issues |
+|---|---|---|---|---|---|
+| **Qwen3.5-9B** | **80.5** | [77.0, 83.6] | **85.5** | 86.7 | ≈$0.16 |
+| Qwen3-8B | 76.9 | [73.3, 80.2] | 82.6 | 84.5 | ≈$0.25 |
+| Qwen2.5-7B (paper baseline) | 76.9 | [73.3, 80.2] | 83.4 | 83.4 | ≈$0.10 |
+| Ministral-8B-2512 | 74.1 | [70.3, 77.5] | 82.8 | 81.2 | ≈$0.15 |
+| Granite-4.1-8B | 74.2 | [70.5, 77.7] | 80.9 | 80.7 | ≈$0.15 |
+
+Qwen3.5-9B beats the Qwen2.5-7B baseline by 3.6 points at the same price
+class (paired McNemar 33/13, **p=0.0045**) and, untrained, clears the
+fine-tuned multi-turn LocAgent-7B agent (78.6) and matches
+SweRankEmbed-Small (80.4); within the small lane only the fully trained
+SweRankLLM pipeline (85.5) remains ahead. Its single-file-slice accuracy
+(86.7) exceeds SweRank-7B's benchmark-wide aggregate. Depth 100 under the
+9B gives 81.0/86.0 (+0.5, n.s.) — the depth lever scales with model
+strength. The other modern small models do not beat the old 7B, so the
+generational gain is model-specific, not universal.

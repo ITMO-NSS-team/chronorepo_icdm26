@@ -1,0 +1,9 @@
+experiments/.openrouter_key
+experiments/repos/
+experiments/cache/
+# local junctions to the repo-root data/ and results/ (scripts expect
+# them under experiments/)
+experiments/data/
+experiments/results/
+__pycache__/
+paper/overleaf/

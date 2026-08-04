@@ -35,13 +35,13 @@ pts = [
     # name, cost $/issue, strict Acc@5, color, marker, (dx, dy) pts, ha
     ("BM25", 2e-4, 0.347, ORANGE, "o", (8, -3), "left"),
     ("candidates, no LLM", 4e-4, 0.674, BLUE, "s", (7, -3), "left"),
-    ("+ one 7B call", 1e-3, 0.769, BLUE, "*", (7, -3), "left"),
-    ("+ one MoE call", 2.2e-3, 0.828, BLUE, "P", (0, 8), "center"),
+    ("+ one 9B call", 1e-3, 0.805, BLUE, "*", (-7, -4), "right"),
+    ("+ one MoE call (d100)", 1.5e-3, 0.837, BLUE, "P", (-4, 8), "center"),
     ("Agentless", 0.70, 0.675, AQUA, "^", (0, -13), "center"),
     ("LocAgent (7B ft)", 0.05, 0.786, AQUA, "v", (0, -13), "center"),
     ("OpenHands", 0.79, 0.798, AQUA, "s", (7, -3), "left"),
     ("LocAgent (Claude-3.5)", 0.66, 0.834, AQUA, "D", (0, 8), "center"),
-    ("SweRank (7B)", 0.011, 0.855, PURPLE, "X", (-3, -13), "center"),
+    ("SweRank (7B)", 0.011, 0.855, PURPLE, "X", (0, -13), "center"),
     ("SweRank (32B)", 0.015, 0.866, PURPLE, "d", (4, 8), "center"),
 ]
 for name, x, y, c, m, (dx, dy), ha in pts:

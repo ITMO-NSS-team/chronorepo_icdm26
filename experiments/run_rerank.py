@@ -32,6 +32,23 @@ SYSTEM = ("You are a code localization assistant. Given a GitHub issue and a "
           "Answer with ONLY a JSON array of up to 10 file paths from the "
           "candidate list, most likely first. No explanations.")
 
+# count-aware variant: nudges the model to reason about the SIZE of the fix
+# before naming files (targets the multi-file failure mode).
+SYSTEM_COUNT = (
+    "You are a code localization assistant. Given a GitHub issue and a "
+    "list of candidate files from the repository, identify the files that "
+    "must be modified to resolve the issue. First silently decide how many "
+    "files the fix realistically spans: most fixes touch one file, but "
+    "coordinated changes (implementation plus its re-export, parallel "
+    "backends, shared base classes) span two to five. Then answer with "
+    "ONLY a JSON array of file paths from the candidate list: put every "
+    "file that must change first, most likely first, and after them up to "
+    "10 total as fallbacks. No explanations.")
+
+PROMPTS = {"default": SYSTEM, "count": SYSTEM_COUNT}
+PROMPT = "default"
+TEMPERATURE = 0.0
+
 
 def api_key():
     k = os.environ.get("OPENROUTER_API_KEY")
@@ -74,9 +91,9 @@ def build_prompt(rec, condition):
 def call_llm(key, prompt, retries=4):
     body = json.dumps({
         "model": MODEL,
-        "messages": [{"role": "system", "content": SYSTEM},
+        "messages": [{"role": "system", "content": PROMPTS[PROMPT]},
                      {"role": "user", "content": prompt}],
-        "temperature": 0.0,
+        "temperature": TEMPERATURE,
         "max_tokens": 1500,   # thinking models spend budget before answering
     }).encode()
     for attempt in range(retries):
@@ -115,7 +132,7 @@ def parse_ranking(text, candidates):
 
 
 def main():
-    global INP, OUT, MODEL, URL, MAX_CANDS
+    global INP, OUT, MODEL, URL, MAX_CANDS, PROMPT, TEMPERATURE
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=8)
@@ -126,12 +143,18 @@ def main():
                     help="OpenAI-compatible chat completions endpoint")
     ap.add_argument("--max-cands", type=int, default=0,
                     help="truncate candidate list to first N (0 = all)")
+    ap.add_argument("--prompt", default="default", choices=sorted(PROMPTS),
+                    help="system prompt variant")
+    ap.add_argument("--temperature", type=float, default=0.0,
+                    help="sampling temperature (self-consistency runs)")
     ap.add_argument("--conditions", nargs="*",
                     default=["bm25_plain", "hybrid_plain", "hybrid_evidence"])
     args = ap.parse_args()
     INP, OUT, MODEL, URL = (Path(args.input), Path(args.out), args.model,
                             args.url)
     MAX_CANDS = args.max_cands
+    PROMPT = args.prompt
+    TEMPERATURE = args.temperature
     key = "local" if "localhost" in URL or "127.0.0.1" in URL else api_key()
 
     recs = [json.loads(l) for l in open(INP, encoding="utf-8")]
