@@ -39,8 +39,14 @@ def main():
                                        encoding="utf-8")]
     lb = {json.loads(l)["instance_id"]: json.loads(l)
           for l in open(HERE / "data" / "locbench.jsonl", encoding="utf-8")}
-    multi = [r for r in inp if len(r["gold"]) >= 3]
-    log(f"{len(multi)} instances with 3+ gold files")
+    # official edit_functions gold: created-by-the-fix files are excluded,
+    # so every companion counted below exists at the base commit
+    ef = json.loads((HERE / "data" / "edit_functions.json").read_text())
+    gold_of = {k: sorted({e.split(":")[0] for e in v})
+               for k, v in ef.items() if v}
+    multi = [r for r in inp
+             if len(gold_of.get(r["instance_id"], ())) >= 3]
+    log(f"{len(multi)} instances with 3+ official gold files")
 
     hist_cache = {}
     stats = {"oracle_n": 0, "oracle_comp_tot": 0, "oracle_comp_found": 0,
@@ -63,7 +69,7 @@ def main():
             base_ts = int(chrono.git(repo_dir, "show", "-s", "--format=%ct",
                                      base).strip())
             files50 = [c["file"] for c in r["hybrid_top"]]
-            gold = set(r["gold"])
+            gold = set(gold_of[iid])
 
             # oracle anchor: best-ranked gold file among candidates
             oracle = next((f for f in files50 if f in gold), None)

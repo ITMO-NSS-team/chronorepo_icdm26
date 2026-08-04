@@ -5,15 +5,25 @@
 > reaches **76.9% strict Acc@5** on LocBench (n=559, official ground truth),
 > statistically indistinguishable from LocAgent's **fine-tuned** 7B agent
 > (78.6, multi-turn, GPU-served) and above CodeRankEmbed (74.3) and
-> Agentless with Claude-3.5 (67.5). The same pipeline scores 80.0 on
-> SWE-bench Lite and 77.0 on Verified. Cost: ~$0.001 per issue, one CPU
-> core for the graph.
+> Agentless with Claude-3.5 (67.5). In the same weight class it is beaten
+> only by SweRank's task-trained retrieve-and-rerank models (85.5 at 7B;
+> 86.6 at 32B, the current benchmark ceiling — ICLR 2026), which require
+> training and GPU serving. The same pipeline scores 80.0 on SWE-bench Lite
+> and 77.0 on Verified. Cost: ~$0.001 per issue, one CPU core for the
+> graph. See Appendix M for the consolidated leaderboard.
 
 Supplementary tables for "ChronoRepo: Cost-Effective Change Localization in
 Software Repositories with a Temporal Knowledge Graph" (ICDM 2026 demo track
-submission). All numbers below use LocBench's official ground truth (files
-of functions edited by the reference patch, the benchmark's `edit_functions`
-field), identical to Table 7 of the LocAgent paper (Chen et al., ACL 2025).
+submission). Unless a section notes otherwise, numbers use LocBench's
+official ground truth (files of functions edited by the reference patch,
+the benchmark's `edit_functions` field), identical to Table 7 of the
+LocAgent paper (Chen et al., ACL 2025). **Provenance caveat:** the legacy
+ladder of Appendices B–B3 was produced by the pre-optimization pipeline
+whose candidate baskets embed the *patch-file* gold that Appendix A
+retracts (`prepare_rerank*.py`); rescore those rows under the official
+definition with `experiments/rescore_official_gt.py` before citing them.
+Everything the paper reports (Appendices B4, B5, J, L) uses the official
+ground truth throughout.
 
 ## A. Ground-truth correction
 
@@ -26,10 +36,15 @@ here and in the paper use the official definition. SWE-bench Lite/Verified
 experiments are unaffected (self-contained protocol, same gold for all
 compared methods).
 
-## B. Main ladder on LocBench (strict file-level Acc@k)
+## B. Legacy ladder on LocBench (strict file-level Acc@k)
 
 Strict metric: an instance counts only if *all* gold files are in the top-k.
-Our run covers 540/560 instances (see D). Wilson 95% CIs for Acc@5.
+Our run covers 540/560 instances (see F). Wilson 95% CIs for Acc@5.
+*Historical section:* these rows predate the recipe optimization (Appendix
+I) and the ground-truth correction workflow; the LLM rows and ceilings were
+scored against the gold embedded in the rerank inputs (see the provenance
+caveat above). They are retained for the recipe-evolution story; the
+operative numbers are in B4–B5 and L.
 
 | Method | Acc@5 | 95% CI | Acc@10 | cost/issue |
 |---|---|---|---|---|
@@ -58,8 +73,12 @@ twice what model strength buys (+3.7 pts).
 ## B2. The same ladder on SWE-bench Lite and Verified
 
 Identical pipeline and candidate recipe, gold = files of the reference
-patch (both benchmarks are single-file by construction, so the ground-truth
-subtlety of Appendix A does not arise). Rerank model: vanilla
+patch. SWE-bench Lite is single-file by construction (300/300 one-file
+patches); Verified is mostly single-file (429/500; 71 instances touch 2–21
+files, and the two with more than five gold files cap strict Acc@5 at
+99.6). Files *created* by the fix — the ground-truth subtlety of Appendix
+A — are essentially absent here (0 patches in Lite, 1/500 in Verified), so
+patch-file gold is sound on both sets. Rerank model: vanilla
 Qwen2.5-7B-Instruct, one call, no fine-tuning, no agent loop.
 
 | Method | Lite Acc@5 (n=300) | Verified Acc@5 (n=500) |
@@ -115,8 +134,10 @@ of the *same* baskets, so the comparison is strictly paired.
 | **+ 7B call, depth 50** | 91.8 | **76.9** | [73.3, 80.2] | 83.4 | 1,033 |
 | + 7B call, depth 100 | 94.3 | 76.4 | [72.7, 79.7] | 83.7 | 1,667 |
 | *Agentless, Claude-3.5 (quoted)* | — | 67.5 | — | 67.5 | LLM calls |
-| *CodeRankEmbed (quoted)* | — | 74.3 | — | 80.9 | GPU embeddings |
+| *CodeRankEmbed 137M (quoted)* | — | 74.3 | — | 80.9 | GPU embeddings |
+| *SweRankEmbed-Small 137M (quoted)* | — | 80.4 | — | 84.8 | GPU embeddings |
 | *LocAgent, fine-tuned 7B agent (quoted)* | — | 78.6 | — | 79.6 | GPU serving |
+| *SweRank, trained 7B retrieve+rerank (quoted)* | — | 85.5 | — | 88.4 | GPU serving |
 | *LocAgent, Claude-3.5 agent (quoted)* | — | 83.4 | — | 86.1 | ~$0.66 |
 
 Depth 50 is the operating point: it beats depth 25 (McNemar 24/10,
@@ -152,7 +173,9 @@ so a ~14-point gap to a frontier agent remains there.
 
 ## C. Breakdown by number of gold files
 
-Strict Acc@5, official ground truth:
+Strict Acc@5, official ground truth. Computed on the 540-instance subset of
+Appendix F (the full 559-instance set has 32 instances with 3+ gold files;
+the paper cites that count):
 
 | Method | 1 file (n=467) | 2 files (n=42) | 3+ files (n=31) |
 |---|---|---|---|
@@ -178,7 +201,12 @@ with a 61.3% ceiling, not by absence of per-file signal.
 Related negative result: co-change expansion from a found anchor file does
 not recover multi-file companions (oracle anchor's top-10 co-change
 neighbours contain only 18% of the missing companions) — companions of
-multi-file fixes are largely not evolutionary-coupling partners.
+multi-file fixes are largely not evolutionary-coupling partners. *Caveat:*
+this experiment (`test_expand.py`) selected its 3+-file instances and
+companions under the pre-correction patch-file gold, where 59% of
+multi-file targets do not exist at the base commit and are unfindable by
+construction; 18% is therefore a lower bound, and the experiment should be
+rerun on `edit_functions` gold before the claim is leaned on.
 
 ## D. Category and repository-size subgroups (Acc@5, top-50 rerank)
 
@@ -225,7 +253,13 @@ instances), graph configs 52.6→53.5.
 LocBench instances bucketed by the commit count of their repository
 (quartiles). Gains are paired within instance; `co-edges` is the median
 number of co-change edges available at the instance's base commit.
-Reproduce with `experiments/analyze_history_length.py`.
+Reproduce with `experiments/analyze_history_length.py`. Ground-truth note:
+the ΔR@10 columns are computed from the original grid run
+(`results_locbench.jsonl`, patch-file gold), while the Sonnet Acc@5 column
+is rescored under the official `edit_functions` gold; since the Δ columns
+are within-instance *differences* between methods, the bucket ordering is
+unaffected, but absolute Δ values would shift slightly under the official
+definition.
 
 | History (commits) | n | ΔR@10 graph over BM25 | Δ temporal vs static layer | Sonnet-4.5 Acc@5 | median co-edges |
 |---|---|---|---|---|---|
@@ -581,3 +615,55 @@ commit. Total API spend for every LLM experiment in the paper: ≈ $4.5
 instance). Claude 3.5 (used by LocAgent) is no longer served by the
 provider; Sonnet 4.5 is a stronger substitute, which only reinforces the
 finding that model strength is secondary to candidate coverage.
+
+## M. Consolidated LocBench leaderboard (file-level, strict Acc@k)
+
+All rows: Loc-Bench V1 (560 instances), official `edit_functions` ground
+truth, strict metric (*all* gold files in top-k). Published rows are quoted
+from Table 7 of LocAgent (ACL 2025) and Table 2 of SweRank (ICLR 2026); our
+rows cover 559/560 instances. Costs marked † come from the papers' own cost
+studies (LocAgent's was run in the SWE-bench Lite setting; no per-issue
+LocBench costs are published) and exclude standing GPU-serving cost.
+
+### M.1 Small-model lane (no component above 7B)
+
+| # | System | Trained? | Acc@5 | Acc@10 | $/issue | Hardware |
+|---|---|---|---|---|---|---|
+| 1 | **SweRank 7B retrieve+rerank** (SweRankLLM-Small, quoted) | yes (both stages) | **85.5** | **88.4** | ≈$0.01† | GPU |
+| 2 | SweRankEmbed-Small 137M retriever (quoted) | yes | 80.4 | 84.8 | — | GPU |
+| 3 | LocAgent agent, fine-tuned Qwen2.5-7B (quoted) | yes (SFT) | 78.6 | 79.6 | ≈$0.05† | GPU |
+| 4 | **ChronoRepo + one vanilla Qwen2.5-7B call (ours)** | **no** | 76.9 | 83.4 | <$0.001 | CPU + API |
+| 5 | CodeRankEmbed 137M retriever (quoted) | yes | 74.3 | 80.9 | — | GPU |
+| 6 | ChronoRepo candidates, no LLM (ours) | no | 67.4 | 76.6 | ~$0 | CPU |
+| 7 | BM25 (ours) | no | 34.7 | 48.1 | ~$0 | CPU |
+
+Reading: every system above our 7B row is *trained for the task*; every
+training-free row below 76.9 is ours. ChronoRepo is the strongest
+training-free entry and the cheapest at any accuracy above BM25; SweRank
+holds the lane (and benchmark) ceiling at 10–15× our per-issue cost plus
+GPU serving.
+
+### M.2 Heavyweight lane (frontier agents, 32B rerankers, large MoE)
+
+| # | System | Loop | Acc@5 | Acc@10 | $/issue |
+|---|---|---|---|---|---|
+| 1 | **SweRankLLM-Large, trained 32B reranker** (quoted) | single pass | **86.6** | **89.8** | GPU |
+| 2 | LocAgent agent, Claude-3.5 (quoted) | multi-turn | 83.4 | 86.1 | ≈$0.66† |
+| 3 | **ChronoRepo + one Kimi-K2 / GLM-5.1 call (ours)** | one call | 82.8 | 86.6 / 86.9 | <$0.003 |
+| 4 | ChronoRepo + one Qwen3-Coder call (ours) | one call | 81.0 | 86.4 | ≈$0.001 |
+| 5 | OpenHands agent, Claude-3.5 (quoted) | multi-turn | 79.8 | 80.0 | ≈$0.79† |
+| 6 | SWE-agent, Claude-3.5 (quoted) | multi-turn | 77.7 | 77.7 | ≈$0.67† |
+| 7 | Agentless, Claude-3.5 (quoted) | pipeline | 67.5 | 67.5 | LLM calls |
+
+### M.3 Entries not directly comparable (excluded from the ladder)
+
+- **GraphLocator** (arXiv 2512.22469) evaluates on Loc-Bench but reports
+  Success-Location/Recall/Precision (file-level SL 84.97) rather than
+  strict Acc@k.
+- **LARGER** (arXiv 2605.16352) reports 87.0–89.1 file Acc@5 on Loc-Bench
+  with a GPT-5.2 backbone and re-runs all baselines under different
+  backbones (its LocAgent reproduction scores 65.3), so its numbers are
+  not comparable to this table's quoted rows.
+- **MULocBench** (arXiv 2509.25242) documents ten Loc-Bench instances with
+  questionable ground truth and shows all published localizers drop
+  sharply on a broader issue mix — a standing caveat on every row above.

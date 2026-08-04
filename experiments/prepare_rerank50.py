@@ -49,6 +49,12 @@ def main():
                 pass
     insts = [json.loads(l) for l in
              open(HERE / "data" / "locbench.jsonl", encoding="utf-8")]
+    # official ground truth: files of edited functions (Appendix A);
+    # instances without edit_functions gold are skipped
+    ef = json.loads((HERE / "data" / "edit_functions.json").read_text())
+    gold_of = {k: sorted({e.split(":")[0] for e in v})
+               for k, v in ef.items() if v}
+    insts = [i for i in insts if i["instance_id"] in gold_of]
     # only instances that produced valid results in the main run
     valid = set()
     for line in open(HERE / "results" / "results_locbench.jsonl",
@@ -74,7 +80,7 @@ def main():
                 HERE / "cache" / (inst["repo"].replace("/", "__")
                                   + "_log.pkl"))
             base = inst["base_commit"]
-            gold = chrono.gold_files_from_patch(inst["patch"])
+            gold = gold_of[inst["instance_id"]]
             ancestors = chrono.ancestor_set(repo_dir, base)
             files = chrono.tree_at(repo_dir, base)
             py_files = {p: s for p, s in files.items() if p.endswith(".py")}

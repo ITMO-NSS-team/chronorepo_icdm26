@@ -1,4 +1,9 @@
-"""Generate paper figures (PDF) from experiments/results/digest.json."""
+"""Generate paper figures (PDF).
+
+The Pareto figure is self-contained (published + our final numbers,
+hardcoded below with sources); the remaining figures need
+experiments/results/digest.json and are skipped when it is absent.
+"""
 import json
 import sys
 from pathlib import Path
@@ -9,41 +14,55 @@ import matplotlib.pyplot as plt
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = Path(__file__).parent
-D = json.loads((HERE.parent / "experiments" / "results" /
-                "digest.json").read_text("utf-8"))
 FIGS = HERE / "overleaf" / "figs"
 FIGS.mkdir(parents=True, exist_ok=True)
 
-BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
+DIGEST = HERE.parent / "experiments" / "results" / "digest.json"
+D = json.loads(DIGEST.read_text("utf-8")) if DIGEST.exists() else None
+
+BLUE, ORANGE, AQUA, PURPLE = "#2a78d6", "#eb6834", "#1baf7a", "#8e5bd0"
 plt.rcParams.update({"font.size": 8, "font.family": "sans-serif",
                      "axes.edgecolor": "#c3c2b7", "axes.linewidth": 0.6})
 
-# ---- Fig: Pareto (quality vs cost, log x) -------------------------------
-fig, ax = plt.subplots(figsize=(3.45, 2.3))
+# ---- Fig: Pareto (strict Acc@5 on LocBench vs cost, log x) ---------------
+# Ours: paper Table "locbench"/"heavy" (559/560 instances, official GT).
+# x for the free rows is a nominal CPU-time placeholder; LLM rows use
+# measured OpenRouter spend per issue (appendix L). Quoted points:
+# LocAgent ACL'25 Table 7 (accuracy) and Table 5 (costs, SWE-bench Lite
+# setting); SweRank ICLR'26 Table 2 (accuracy) and its reported ~$0.01.
+fig, ax = plt.subplots(figsize=(3.45, 2.4))
 pts = [
-    ("BM25", 2e-4, D["lite"]["all"]["bm25"]["hit10"], ORANGE, "o"),
-    ("grep", 2e-4, D["lite"]["all"]["grep"]["hit10"], ORANGE, "s"),
-    ("ChronoRepo", 4e-4, D["lite"]["all"]["bm25_a025_l90"]["hit10"], BLUE, "*"),
-    ("Agentless", 0.70, 0.697, AQUA, "^"),
-    ("LocAgent (Qwen-32B ft)", 0.09, 0.927, AQUA, "v"),
-    ("LocAgent (Claude-3.5)", 0.66, 0.942, AQUA, "D"),
+    # name, cost $/issue, strict Acc@5, color, marker, (dx, dy) pts, ha
+    ("BM25", 2e-4, 0.347, ORANGE, "o", (8, -3), "left"),
+    ("candidates, no LLM", 4e-4, 0.674, BLUE, "s", (7, -3), "left"),
+    ("+ one 7B call", 1e-3, 0.769, BLUE, "*", (7, -3), "left"),
+    ("+ one MoE call", 2.2e-3, 0.828, BLUE, "P", (0, 8), "center"),
+    ("Agentless", 0.70, 0.675, AQUA, "^", (0, -13), "center"),
+    ("LocAgent (7B ft)", 0.05, 0.786, AQUA, "v", (0, -13), "center"),
+    ("OpenHands", 0.79, 0.798, AQUA, "s", (7, -3), "left"),
+    ("LocAgent (Claude-3.5)", 0.66, 0.834, AQUA, "D", (0, 8), "center"),
+    ("SweRank (7B)", 0.011, 0.855, PURPLE, "X", (-3, -13), "center"),
+    ("SweRank (32B)", 0.015, 0.866, PURPLE, "d", (4, 8), "center"),
 ]
-for name, x, y, c, m in pts:
-    ax.scatter(x, y, c=c, marker=m, s=70 if m == "*" else 32, zorder=3,
+for name, x, y, c, m, (dx, dy), ha in pts:
+    ax.scatter(x, y, c=c, marker=m, s=70 if m in "*P" else 30, zorder=3,
                edgecolors="white", linewidths=0.5)
-    dy = -0.055 if name in ("grep", "LocAgent (Qwen-32B ft)") else 0.028
-    ax.annotate(name, (x, y), xytext=(0, 14 * dy * 3), ha="center",
-                textcoords="offset points", fontsize=6.5)
+    ax.annotate(name, (x, y), xytext=(dx, dy), ha=ha,
+                textcoords="offset points", fontsize=6.0)
 ax.set_xscale("log")
-ax.set_xlim(8e-5, 3)
-ax.set_ylim(0.45, 1.02)
+ax.set_xlim(8e-5, 4)
+ax.set_ylim(0.28, 0.95)
 ax.set_xlabel("cost per issue, USD (log)")
-ax.set_ylabel("issues with a gold file found")
+ax.set_ylabel("strict Acc@5 (LocBench)")
 ax.grid(True, which="major", lw=0.3, color="#e1e0d9", zorder=0)
 ax.set_axisbelow(True)
 fig.tight_layout()
 fig.savefig(FIGS / "pareto.pdf")
 print("pareto.pdf")
+
+if D is None:
+    print("digest.json not found - skipping data-dependent figures")
+    sys.exit(0)
 
 # ---- Fig: LocBench per-category gains -----------------------------------
 fig, ax = plt.subplots(figsize=(3.45, 1.9))

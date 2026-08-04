@@ -4,7 +4,8 @@ Cost-effective change localization in software repositories with a temporal
 knowledge graph: import structure + co-change relations mined from git
 history, queried by training-free personalized propagation on a single CPU.
 
-See `appendix.md` for extended result tables.
+See `appendix.md` for extended result tables and the consolidated
+LocBench leaderboard (Appendix M: small-model lane vs heavyweight lane).
 
 ## Layout
 
@@ -14,6 +15,8 @@ See `appendix.md` for extended result tables.
   personalized propagation, metrics, leakage-free ancestry cutoffs.
 - `experiments/fetch_swebench.py` — SWE-bench Lite/Verified metadata via the
   HF datasets-server API (no heavy deps).
+- `experiments/fetch_locbench.py` — Loc-Bench V1 (560 instances) and its
+  official `edit_functions` ground truth via the same API.
 - `experiments/run_experiments.py` — main E2 runner (issue -> files):
   clones repos, builds graphs per instance strictly before the base commit,
   evaluates the full seed/alpha/lambda grid; resumable.
@@ -25,7 +28,11 @@ See `appendix.md` for extended result tables.
   Qwen2.5-7B and Claude Sonnet 4.5.
 - `experiments/run_f1.py`, `analyze_f1.py` — CodeScout-protocol F1
   (variable-size predictions, threshold tuned on Lite only).
-- `experiments/analyze_rerank.py` — strict Acc@k, Wilson CIs, exact McNemar.
+- `experiments/analyze_rerank.py` — strict Acc@k, Wilson CIs, exact McNemar
+  (scores against the official `edit_functions` gold).
+- `experiments/rescore_official_gt.py` — rescores legacy rerank runs (whose
+  input baskets embedded the pre-correction patch-file gold) under the
+  official ground truth; see the provenance caveat in `appendix.md`.
 - `experiments/test_expand.py` — locate-then-expand negative result on
   multi-file fixes.
 - `experiments/digest.py`, `make_report.py`, `summarize*.py` — aggregation
@@ -47,6 +54,7 @@ rerank experiments.
 ```bash
 cd experiments
 python fetch_swebench.py lite
+python fetch_locbench.py                          # Loc-Bench V1 + official GT
 python run_experiments.py                         # E2 on SWE-bench Lite
 python run_e3.py                                  # impact set
 python prepare_rerank50.py                        # candidate baskets

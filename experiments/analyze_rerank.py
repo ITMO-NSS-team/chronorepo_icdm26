@@ -39,23 +39,31 @@ def main():
     inp = {json.loads(l)["instance_id"]: json.loads(l)
            for l in open(HERE / "data" / "rerank_input.jsonl",
                          encoding="utf-8")}
+    # score against the official edit_functions gold, not the gold embedded
+    # in the (possibly pre-correction) rerank input file
+    ef = json.loads((HERE / "data" / "edit_functions.json").read_text())
+    gold_of = {k: {e.split(":")[0] for e in v} for k, v in ef.items() if v}
     llm = defaultdict(dict)   # instance -> condition -> acc5/acc10
     for line in open(R / "rerank_qwen7b.jsonl", encoding="utf-8"):
         r = json.loads(line)
-        if "acc5" not in r:
+        if "acc5" not in r or r["instance_id"] not in gold_of:
             continue
         rec = inp[r["instance_id"]]
         cands = (rec["bm25_top"] if r["condition"] == "bm25_plain"
                  else [c["file"] for c in rec["hybrid_top"]])
         ranked = list(r["ranked"]) + [c for c in cands
                                       if c not in r["ranked"]]
-        gold = set(rec["gold"])
+        gold = gold_of[r["instance_id"]]
         llm[r["instance_id"]][r["condition"]] = {
             "acc5": gold <= set(ranked[:5]),
             "acc10": gold <= set(ranked[:10])}
 
     base = defaultdict(dict)  # instance -> method -> acc5/acc10
-    for line in open(R / "results_locbench.jsonl", encoding="utf-8"):
+    base_path = R / "results_locbench_gt.jsonl"
+    if not base_path.exists():  # pre-correction grid; deltas only
+        base_path = R / "results_locbench.jsonl"
+        print(f"WARNING: {base_path.name} uses patch-file gold")
+    for line in open(base_path, encoding="utf-8"):
         r = json.loads(line)
         if r.get("instance_id") not in llm or "configs" not in r:
             continue
