@@ -17,13 +17,13 @@ Software Repositories with a Temporal Knowledge Graph" (ICDM 2026 demo track
 submission). Unless a section notes otherwise, numbers use LocBench's
 official ground truth (files of functions edited by the reference patch,
 the benchmark's `edit_functions` field), identical to Table 7 of the
-LocAgent paper (Chen et al., ACL 2025). **Provenance caveat:** the legacy
-ladder of Appendices B–B3 was produced by the pre-optimization pipeline
-whose candidate baskets embed the *patch-file* gold that Appendix A
-retracts (`prepare_rerank*.py`); rescore those rows under the official
-definition with `experiments/rescore_official_gt.py` before citing them.
-Everything the paper reports (Appendices B4, B5, J, L) uses the official
-ground truth throughout.
+LocAgent paper (Chen et al., ACL 2025). **Provenance, verified:** the
+legacy basket files (`rerank_input*.jsonl`) embed the pre-correction
+patch-file gold, but every ladder number in Appendices B–B3 was scored
+against the official definition — reproduced exactly by
+`experiments/rescore_official_gt.py` (protocol and outputs:
+`results/summary_rescore_gt.md`). Everything the paper reports
+(Appendices B4, B5, J, L) uses the official ground truth throughout.
 
 ## A. Ground-truth correction
 
@@ -41,10 +41,11 @@ compared methods).
 Strict metric: an instance counts only if *all* gold files are in the top-k.
 Our run covers 540/560 instances (see F). Wilson 95% CIs for Acc@5.
 *Historical section:* these rows predate the recipe optimization (Appendix
-I) and the ground-truth correction workflow; the LLM rows and ceilings were
-scored against the gold embedded in the rerank inputs (see the provenance
-caveat above). They are retained for the recipe-evolution story; the
-operative numbers are in B4–B5 and L.
+I); the operative numbers are in B4–B5 and L. All rows below are
+official-GT — verified by rerunning
+`experiments/rescore_official_gt.py` against `edit_functions.json`, which
+reproduces every accuracy, ceiling and paired test exactly
+(`results/summary_rescore_gt.md`).
 
 | Method | Acc@5 | 95% CI | Acc@10 | cost/issue |
 |---|---|---|---|---|
