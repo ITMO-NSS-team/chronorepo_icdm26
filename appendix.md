@@ -668,3 +668,70 @@ GPU serving.
 - **MULocBench** (arXiv 2509.25242) documents ten Loc-Bench instances with
   questionable ground truth and shows all published localizers drop
   sharply on a broader issue mix — a standing caveat on every row above.
+
+## N. Where the gap to SweRank lives
+
+SweRank-7B (85.5 / 88.4, trained retriever + trained reranker) is the
+nearest system above our best single call (Kimi-K2 / GLM-5.1, 82.8 /
+86.6–86.9). This appendix decomposes the 2.7-point gap using the
+per-instance outputs of all nine full-run models. Reproduce with
+`experiments/analyze_gap.py`.
+
+### N.1 Subgroups (strict Acc@5, n=559, official GT)
+
+| Subgroup | n | Kimi-K2 | GLM-5.1 | Qwen3-Coder | Qwen2.5-7B |
+|---|---|---|---|---|---|
+| all | 559 | 82.8 | 82.8 | 81.0 | 76.9 |
+| **gold = 1 file** | 483 | **88.0** | **88.2** | **86.3** | 83.4 |
+| gold = 2 files | 44 | 59.1 | 59.1 | 61.4 | 50.0 |
+| gold ≥ 3 files | 32 | 37.5 | 34.4 | 28.1 | 15.6 |
+| Bug Report | 241 | **88.0** | **88.4** | 84.6 | 84.2 |
+| Feature Request | 150 | 84.7 | 84.7 | 84.0 | 79.3 |
+| Performance Issue | 139 | 71.9 | 71.9 | 71.2 | 61.2 |
+| Security Vulnerability | 29 | 82.8 | 79.3 | 82.8 | 79.3 |
+| issue quotes a .py path | 238 | **87.0** | **87.4** | 85.3 | 84.0 |
+| gold=1 & repo ≤ ~950 files | 220 | **92.7** | **92.7** | **91.4** | **88.2** |
+
+Bold: at or above SweRank-7B's benchmark-wide 85.5. On single-gold-file
+instances — 86.4% of the benchmark — one MoE call scores 88.0–88.2 Acc@5
+and 90.1–90.3 Acc@10, above SweRank-7B's *aggregate* (85.5 / 88.4), and
+the vanilla 7B reaches 83.4, the level of the Claude-3.5 agent's
+aggregate. Caveat as in Appendix C: SweRank's per-instance predictions are
+not public, so its own single-file accuracy is unknown (presumably also
+above its aggregate); the honest statement is that *our single-file
+performance exceeds their benchmark-wide number*, not that we beat them
+head-to-head on the slice. The converse decomposition: if multi-file
+instances converted at the single-file rate, the aggregate would be ≈88.0
+— the entire gap to SweRank (and beyond) sits in 76 multi-file instances
+at 50.0 Acc@5 (ceiling 82.9) plus the Performance category, whose deficit
+is conversion, not coverage (ceiling 89.2, Kimi 71.9).
+
+### N.2 Ensembling the nine models is a dead end (negative result)
+
+Systematic search over all 2–4-model combinations × {RRF k=60, top-5
+voting}, selected on the dev half and evaluated on the untouched holdout:
+the dev-best ensemble (top-5 voting) reaches **83.5 full-set Acc@5** —
++0.7 over the best single model, still 2.0 below SweRank-7B. The oracle
+that picks the best of all nine models per instance reaches only 86.8, so
+even perfect routing barely clears 85.5: the nine models share their
+errors, and no amount of single-call ensembling closes the gap. This
+supersedes and confirms the ad-hoc fusion result of Appendix L.
+
+### N.3 Headroom anatomy and the two levers
+
+Of 559 instances, 46 are basket misses (gold not in the top-50 candidates;
+33 of them single-gold-file) and 28 are convertible-but-unconverted (gold
+in basket, all nine models fail). The two corresponding levers:
+
+1. **Multi-file conversion** (76 instances at 50.0): count-aware
+   prompting (ask the model to first decide how many files the fix spans),
+   self-consistency voting over ~5 sampled calls, or anchor-plus-
+   companions prompting. Converting multi-file at the single-file rate is
+   worth ≈ +5.2 points — more than the whole gap.
+2. **Basket recall on single-file misses** (33 instances): depth-100
+   baskets (ceiling 94.3 vs 91.8) reranked by an MoE rather than the 7B —
+   the 7B could not convert depth 100 (Appendix B4), but the stronger
+   models were never tried on it.
+
+Both experiments are single-call, OpenRouter-priced at roughly $1–2 for
+the full benchmark per configuration.

@@ -33,6 +33,9 @@ LocBench leaderboard (Appendix M: small-model lane vs heavyweight lane).
 - `experiments/rescore_official_gt.py` — rescores legacy rerank runs (whose
   input baskets embedded the pre-correction patch-file gold) under the
   official ground truth; see the provenance caveat in `appendix.md`.
+- `experiments/analyze_gap.py` — decomposes the gap to SweRank: subgroup
+  accuracies, systematic ensemble search (dev/holdout), oracle headroom
+  (appendix N).
 - `experiments/test_expand.py` — locate-then-expand negative result on
   multi-file fixes.
 - `experiments/digest.py`, `make_report.py`, `summarize*.py` — aggregation
