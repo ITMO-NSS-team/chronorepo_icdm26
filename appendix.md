@@ -476,6 +476,7 @@ given good candidates, is recognition rather than reasoning.
 |---|---|---|---|---|
 | Kimi K2-0905 | **82.8** | [79.5, 85.7] | 86.6 | 988 |
 | GLM-5.1 | **82.8** | [79.5, 85.7] | **86.9** | 1303 |
+| Kimi K3 | 81.9 | [78.5, 84.9] | 86.2 | 1484 |
 | DeepSeek V4 Pro | 81.2 | [77.8, 84.2] | 85.3 | 1802 |
 | Qwen3-Coder (480B-A35B) | 81.0 | [77.6, 84.1] | 86.4 | 1082 |
 | MiniMax-M2.7 | 80.9 | [77.4, 83.9] | 85.3 | 1491 |
@@ -508,7 +509,10 @@ The two co-leaders agree on the top-ranked file in 86.2% of instances, so
 their errors are largely shared, which is why fusion buys little. DeepSeek
 V4 Pro spends 1802 tokens per call, nearly double the leaders, and lands
 1.6 points lower: a fourth data point for deliberation not paying off on
-this task.
+this task. Kimi K3 is the fifth and the most expensive one: at 14 times the
+per-call price of K2 and 1.5 times the tokens, it scores 81.9 against K2's
+82.8 (McNemar 7/12, p = 0.36) — the newer flagship with a reasoning bias
+does not beat its own cheaper predecessor here.
 
 Exact McNemar against the 7B: Kimi 40/7 (p < 1e-4), Qwen3-Coder 35/12
 (p = 0.001). Kimi versus Qwen3-Coder: 20/10, p = 0.099, not significant.
