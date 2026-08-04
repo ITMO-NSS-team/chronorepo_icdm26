@@ -1,0 +1,16 @@
+[02:57:58] ablation/dev: 264 instances, 25 variants
+[03:02:05] 20/264 (12.3s/inst)
+[03:06:07] 40/264 (12.2s/inst)
+[03:08:50] ccxt__ccxt-24388 ERROR subprocess.CalledProcessError: Command '['git', '-C', 'D:\\claude\\repo-repr\\experiments\\repos\\ccxt__ccxt.git', 'log', '--all', '--numstat', '--format=%x01%H%x09%ct']' returned non-zero exit status 128.
+[03:12:27] 60/264 (14.5s/inst)
+[03:16:48] 80/264 (14.1s/inst)
+[03:26:33] 100/264 (17.1s/inst)
+[03:32:02] 120/264 (17.0s/inst)
+[03:37:23] 140/264 (16.9s/inst)
+[03:43:59] 160/264 (17.3s/inst)
+[03:49:12] 180/264 (17.1s/inst)
+[03:57:07] 200/264 (17.7s/inst)
+[04:02:06] 220/264 (17.5s/inst)
+[04:04:28] 240/264 (16.6s/inst)
+[04:06:07] 260/264 (15.7s/inst)
+[04:06:50] ABLATION DONE

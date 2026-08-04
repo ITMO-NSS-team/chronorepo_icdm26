@@ -1,0 +1,13 @@
+[13:21:12] sweep2/dev: 264 instances, 9 variants
+[13:26:59] 25/264 (13.9s/inst)
+[13:31:11] ccxt__ccxt-24388 ERROR subprocess.CalledProcessError: Command '['git', '-C', 'D:\\claude\\repo-repr\\experiments\\repos\\ccxt__ccxt.git', 'log', '--all', '--numstat', '--format=%x01%H%x09%ct']' returned non-zero exit status 128.
+[13:31:52] 50/264 (12.8s/inst)
+[13:37:50] 75/264 (13.3s/inst)
+[13:47:43] 100/264 (15.9s/inst)
+[13:53:54] 125/264 (15.7s/inst)
+[14:01:31] 150/264 (16.1s/inst)
+[14:06:53] 175/264 (15.7s/inst)
+[14:16:14] 200/264 (16.5s/inst)
+[14:21:03] 225/264 (16.0s/inst)
+[14:23:58] 250/264 (15.1s/inst)
+[14:24:59] SWEEP DONE

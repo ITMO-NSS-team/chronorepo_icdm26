@@ -1,0 +1,40 @@
+[02:58:53] 296 instances
+[03:01:55] 25/296 (7.3s/inst)
+[03:07:12] 50/296 (10.0s/inst)
+[03:13:41] 75/296 (11.8s/inst)
+[03:16:35] 100/296 (10.6s/inst)
+[03:34:59] 125/296 (17.3s/inst)
+[03:38:59] 150/296 (16.0s/inst)
+[03:43:49] 175/296 (15.4s/inst)
+[03:51:12] 200/296 (15.7s/inst)
+[03:57:13] 225/296 (15.6s/inst)
+[04:03:35] 250/296 (15.5s/inst)
+[04:08:38] 275/296 (15.2s/inst)
+[04:11:54] E2E PREP DONE
+296 calls to make (0 already done)
+50/296
+100/296
+150/296
+200/296
+250/296
+
+condition          Acc@5   Acc@10  ceiling  n
+hybrid_plain        65.9%   65.9%   90.9%  296
+296 calls to make (0 already done)
+50/296
+100/296
+150/296
+200/296
+250/296
+
+condition          Acc@5   Acc@10  ceiling  n
+hybrid_plain        64.5%   64.5%   90.2%  296
+296 calls to make (0 already done)
+50/296
+100/296
+150/296
+200/296
+250/296
+
+condition          Acc@5   Acc@10  ceiling  n
+hybrid_plain        62.2%   62.2%   87.2%  296

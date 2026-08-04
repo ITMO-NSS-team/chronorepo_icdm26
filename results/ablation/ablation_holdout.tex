@@ -1,0 +1,41 @@
+\begin{tabular}{l rrr r}
+\toprule
+Configuration & ceil@50 & Acc@5 & $\Delta$ & $p$\\
+\midrule
+Full method & 92.2 & 68.2 & --- & ---\\
+\midrule
+\multicolumn{5}{l}{\emph{A. Candidate sources (drop one)}}\\
+\quad without BM25 list & 91.6 & 67.9 & -0.3 & 1.000\\
+\quad without propagation (BM25 seed) & 91.6 & 68.2 & +0.0 & 1.000\\
+\quad without propagation (identifier seed) & 91.6 & 67.9 & -0.3 & 1.000\\
+\quad without recency prior & 91.6 & 67.2 & -1.0 & 0.629\\
+\quad without path tokens & 90.2 & 61.8 & -6.4 & $<$0.001\\
+\quad without paths quoted in issue & 92.2 & 67.2 & -1.0 & 0.250\\
+\quad without test/doc demotion & 88.9 & 65.5 & -2.7 & 0.021\\
+\quad without graph (both propagations) & 90.9 & 64.9 & -3.4 & 0.064\\
+\midrule
+\multicolumn{5}{l}{\emph{B. Graph layers}}\\
+\quad imports only ($\alpha{=}1$) & 92.2 & 67.9 & -0.3 & 1.000\\
+\quad co-change only ($\alpha{=}0$) & 92.2 & 67.9 & -0.3 & 1.000\\
+\quad $\alpha{=}0.5$ & 92.2 & 67.9 & -0.3 & 1.000\\
+\quad $\alpha{=}0.75$ & 92.2 & 68.2 & +0.0 & 1.000\\
+\midrule
+\multicolumn{5}{l}{\emph{C. Temporal decay}}\\
+\quad no decay ($\lambda{=}0$) & 92.2 & 67.9 & -0.3 & 1.000\\
+\quad $\lambda{=}1/365$ & 92.2 & 68.2 & +0.0 & 1.000\\
+\quad $\lambda{=}1/30$ & 92.2 & 67.9 & -0.3 & 1.000\\
+\midrule
+\multicolumn{5}{l}{\emph{D. Propagation}}\\
+\quad 1 iteration & 91.9 & 68.2 & +0.0 & 1.000\\
+\quad 2 iterations & 92.2 & 68.2 & +0.0 & 1.000\\
+\quad 3 iterations & 92.2 & 68.2 & +0.0 & 1.000\\
+\quad restart $0.7$ & 92.2 & 68.6 & +0.3 & 1.000\\
+\quad restart $0.3$ & 92.2 & 66.9 & -1.4 & 0.125\\
+\midrule
+\multicolumn{5}{l}{\emph{E. Fusion}}\\
+\quad score sum instead of RRF & 91.6 & 66.6 & -1.7 & 0.332\\
+\quad fixed-cap union (earlier recipe) & 87.2 & 59.8 & -8.4 & $<$0.001\\
+\quad RRF $k{=}20$ & 91.9 & 68.2 & +0.0 & 1.000\\
+\quad RRF $k{=}80$ & 91.9 & 65.5 & -2.7 & 0.057\\
+\bottomrule
+\end{tabular}
