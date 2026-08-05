@@ -799,3 +799,40 @@ SweRankLLM pipeline (85.5) remains ahead. Its single-file-slice accuracy
 9B gives 81.0/86.0 (+0.5, n.s.) — the depth lever scales with model
 strength. The other modern small models do not beat the old 7B, so the
 generational gain is model-specific, not universal.
+
+### N.6 Prompt optimization does not move the small models
+
+Five system-prompt variants, all staying in the ordering/format register
+(content additions were already ruled out in B3): `top1` (name the single
+most likely file first, then complete the list), `exact10` (return exactly
+ten paths rather than "up to ten"), `verbatim` (copy paths exactly as
+given), `fewshot` (one worked example), `cat` (supply the benchmark's
+issue category and how it should weigh candidates). Compared on the
+LocBench **dev half only**, same hash split as the recipe sweep; strict
+Acc@5, exact McNemar against the default prompt on identical instances.
+Reproduce with `experiments/analyze_prompts.py`.
+
+| Prompt | Qwen3.5-9B (dev) | vs def. | Qwen2.5-7B (dev) | vs def. |
+|---|---|---|---|---|
+| default | 79.5 | — | 75.3 | — |
+| verbatim | 80.6 | 4/1, p=0.38 | 75.3 | 2/2, p=1.00 |
+| cat | 80.6 | 4/1, p=0.38 | 74.5 | 3/5, p=0.73 |
+| top1 | 79.8 | 3/2, p=1.00 | 74.5 | 2/4, p=0.69 |
+| fewshot | 79.8 | 3/2, p=1.00 | 74.1 | 2/5, p=0.45 |
+| exact10 | 79.1 | 4/5, p=1.00 | **71.9** | 5/14, p=0.064 |
+
+Nothing helps. The largest dev movement (+1.1 for the 9B) rests on four
+instances, and **neither dev leader replicates on the untouched holdout**
+(n=296): default 81.4, `cat` 81.8 (4/3, p=1.00), `verbatim` 80.4 (3/6,
+p=0.51). Requiring exactly ten paths actively hurts the 7B (−3.4): it
+pads the list and pushes correct files out of the top five. Supplying the
+issue category does not repair the Performance-category deficit either.
+
+Together with B3 (skeletons, evidence annotations), N.4 (count-aware
+prompting, self-consistency) and N.2 (ensembles), this is the fifth
+independent attempt to extract more from a fixed candidate set by
+changing what the model is asked or how often it is asked, and the fifth
+null result. The levers that did move the metric were structural: the
+candidate recipe (+10.8), basket depth under a strong enough model (+2.0
+Acc@10) and model generation (+3.6 from 7B to 9B). For this task, given
+good candidates, prompt surface is not where the accuracy lives.

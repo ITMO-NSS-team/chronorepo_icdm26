@@ -45,7 +45,33 @@ SYSTEM_COUNT = (
     "file that must change first, most likely first, and after them up to "
     "10 total as fallbacks. No explanations.")
 
-PROMPTS = {"default": SYSTEM, "count": SYSTEM_COUNT}
+# prompt-optimization variants for small models (selected on the dev half
+# only; see appendix). All stay in the ordering/format register - content
+# additions (skeletons, evidence) were already shown not to help.
+SYSTEM_TOP1 = (SYSTEM[:-len("No explanations.")] +
+               "First identify the single most likely file and put it "
+               "first, then complete the ranking. No explanations.")
+SYSTEM_EXACT10 = SYSTEM.replace("up to 10 file paths",
+                                "exactly 10 file paths")
+SYSTEM_VERBATIM = (SYSTEM[:-len("No explanations.")] +
+                   "Copy each path exactly as written in the candidate "
+                   "list. No explanations.")
+SYSTEM_FEWSHOT = (SYSTEM + "\n\nExample.\nIssue: TypeError in "
+                  "DataFrame.merge when suffixes is a tuple\nCandidate "
+                  "files:\n1. pandas/core/reshape/merge.py\n2. "
+                  "pandas/core/frame.py\n3. doc/source/whatsnew.rst\n"
+                  "Answer: [\"pandas/core/reshape/merge.py\", "
+                  "\"pandas/core/frame.py\"]")
+SYSTEM_CAT = (SYSTEM[:-len("No explanations.")] +
+              "Use the issue category to weigh candidates: bug reports "
+              "usually touch one core implementation file; performance "
+              "issues touch computational hot paths, not configuration; "
+              "feature requests may span a few related files. "
+              "No explanations.")
+
+PROMPTS = {"default": SYSTEM, "count": SYSTEM_COUNT, "top1": SYSTEM_TOP1,
+           "exact10": SYSTEM_EXACT10, "verbatim": SYSTEM_VERBATIM,
+           "fewshot": SYSTEM_FEWSHOT, "cat": SYSTEM_CAT}
 PROMPT = "default"
 TEMPERATURE = 0.0
 
@@ -82,7 +108,10 @@ def build_prompt(rec, condition):
         elif condition == "hybrid_content" and c.get("snippet"):
             ev = f"\n   {c['snippet']}"
         lines.append(f"{i}. {c['file']}{ev}")
-    return (f"## Issue\n{rec['issue']}\n\n## Candidate files\n"
+    cat_line = ""
+    if PROMPT == "cat" and rec.get("category"):
+        cat_line = f"## Issue category\n{rec['category']}\n\n"
+    return (f"{cat_line}## Issue\n{rec['issue']}\n\n## Candidate files\n"
             + "\n".join(lines)
             + "\n\n## Task\nJSON array of up to 10 paths, most likely first."),\
         [c["file"] for c in cands]
