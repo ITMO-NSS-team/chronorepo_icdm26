@@ -836,3 +836,35 @@ null result. The levers that did move the metric were structural: the
 candidate recipe (+10.8), basket depth under a strong enough model (+2.0
 Acc@10) and model generation (+3.6 from 7B to 9B). For this task, given
 good candidates, prompt surface is not where the accuracy lives.
+
+## O. Multi-step schemes for small models (negative result)
+
+Following N.4's conclusion that single-call variance tricks are exhausted,
+we tested whether *multi-call composition* closes the gap to SweRank-7B
+(85.5): chunk cascades (4x25 -> playoff), sliding windows (bottom-up with
+carry, RankGPT-style), two-pass split reranking (1-50 and 51-100 with a
+playoff), iterative refinement, and anchor-plus-companions two-step
+prompting for multi-file fixes. Dev half for iteration, holdout untouched,
+pooled n=559 for the final verdict. Reproduce with
+`experiments/night2_lab.py`; full journal in `notes/NIGHT2_LOG.md`.
+
+**Qwen3.5-9B (dev, n=263):** best scheme (sliding window) scores 81.4
+against 81.0 for a single depth-100 call — McNemar 4/3, p=1.0 — at three
+times the tokens. Cascades and anchor prompting actively hurt multi-file
+instances (28.6 and 37.1 vs 42.9 at base): chunking severs the joint
+context between candidate files, and anchoring imposes a single-file
+hypothesis exactly where a group must be recognised.
+
+**Strict Qwen2.5-7B (pooled n=559):** the one glimmer — solo depth-100
+hurts the 7B (75.7 < 76.0 on dev), while windowed depth-100 recovers it:
+77.8 [74.2, 81.1] vs 76.9 for the single call. Direction consistent across
+two independent schemes, but not significant (Acc@5 McNemar 17/12,
+p=0.46; Acc@10 14/7, p=0.19) and worth at most one point at 2.5x the
+cost.
+
+**Conclusion.** With Appendix N this closes the composition space for
+untrained small models: ensembles, voting, prompt variants, in-context
+code, depth scaling, and now multi-call scheduling all fail to move
+strict Acc@5 materially. The residual gap between the best untrained
+small-model configuration (81.0) and SweRank-7B (85.5) is the measured
+value of task-specific training, not of orchestration.
