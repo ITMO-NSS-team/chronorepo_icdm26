@@ -43,14 +43,26 @@ LocBench leaderboard (Appendix M: small-model lane vs heavyweight lane).
 - `experiments/explain_instance.py` — reconstructs and explains a single
   instance's ranking (used for demo material).
 - `paper/make_figures.py` — paper figures from the results digest.
-- `demo/index.html` — self-contained interactive demo UI prototype
-  (graph timeline, impact set with evidence, issue -> files side-by-side).
+- `demo/` — the demo web application: a FastAPI backend that runs
+  `chrono.py` in serving mode (index any GitHub repository live, graph and
+  timeline, impact set, issue -> files with one optional LLM call) plus a
+  Vite/React/sigma.js frontend. See `demo/README.md`; the original
+  single-file prototype is kept in `demo/legacy/`.
 
 ## Requirements
 
 Python 3.12, git. The experiment pipeline is pure stdlib; `matplotlib` only
 for figures; an OpenRouter (or any OpenAI-compatible) key only for the LLM
-rerank experiments.
+rerank experiments. The demo app additionally needs `fastapi` + `uvicorn`
+(and node once, to build its frontend bundle) — see `demo/README.md`.
+
+## Demo
+
+```bash
+python -m venv demo/.venv && demo/.venv/bin/pip install -e demo[test]
+cd demo/web && npm install && npm run build && cd ../..
+demo/.venv/bin/python -m uvicorn app.main:app --app-dir demo --port 8000
+```
 
 ## Reproduction sketch
 

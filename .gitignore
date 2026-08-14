@@ -1,9 +1,18 @@
 experiments/.openrouter_key
 experiments/repos/
 experiments/cache/
+paper/paper_tex/
 # local junctions to the repo-root data/ and results/ (scripts expect
 # them under experiments/)
 experiments/data/
 experiments/results/
 __pycache__/
 paper/overleaf/
+.idea
+.env
+# demo app: clones, history caches, prebuilt indexes, deps
+demo/var/
+demo/snapshots/*.pkl
+demo/.venv/
+demo/web/node_modules/
+demo/web/dist/
