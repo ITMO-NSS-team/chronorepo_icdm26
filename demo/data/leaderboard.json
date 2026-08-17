@@ -1,0 +1,81 @@
+{
+  "source": "Tables I-V of the ICDM 2026 submission (paper/paper_tex/main.tex); quoted rows carry their citation.",
+  "locbench_small": {
+    "title": "LocBench, small-model lane",
+    "caption": "560 issues, 165 repos; no component larger than 9B anywhere in the pipeline. Strict file-level accuracy (all gold files in top-k) under the benchmark's official edit_functions ground truth. Our runs cover 559/560 instances.",
+    "rows": [
+      {"name": "BM25", "acc5": 34.7, "acc10": 48.1, "cost": "~$0", "usd": null, "ours": false},
+      {"name": "ChronoRepo candidates, no LLM", "acc5": 67.4, "acc10": 76.6, "cost": "~$0", "usd": 0, "ours": true},
+      {"name": "ChronoRepo + one vanilla 7B call", "acc5": 76.9, "acc10": 83.4, "cost": "<$0.001", "usd": 0.001, "ours": true},
+      {"name": "ChronoRepo + one vanilla 9B call", "acc5": 80.5, "acc10": 85.5, "cost": "<$0.001", "usd": 0.001, "ours": true},
+      {"name": "CodeRankEmbed 137M (quoted)", "acc5": 74.3, "acc10": 80.9, "cost": "GPU embedding", "usd": null, "ours": false},
+      {"name": "SweRankEmbed-Small 137M (quoted)", "acc5": 80.4, "acc10": 84.8, "cost": "GPU embedding", "usd": null, "ours": false},
+      {"name": "LocAgent, fine-tuned 7B agent (quoted)", "acc5": 78.6, "acc10": 79.6, "cost": "≈$0.05", "usd": 0.05, "ours": false},
+      {"name": "SweRank 7B retriever + reranker (quoted)", "acc5": 85.5, "acc10": 88.4, "cost": "≈$0.01", "usd": 0.01, "ours": false}
+    ]
+  },
+  "locbench_heavy": {
+    "title": "LocBench, heavyweight lane",
+    "caption": "Frontier-model agents and a trained 32B reranker against one call to an open-weights mixture of experts over our unchanged candidate baskets.",
+    "rows": [
+      {"name": "ChronoRepo + one Qwen3-Coder call", "acc5": 81.0, "acc10": 86.4, "cost": "≈$0.001", "usd": 0.001, "ours": true},
+      {"name": "ChronoRepo + one Kimi-K2 call", "acc5": 82.8, "acc10": 86.6, "cost": "<$0.003", "usd": 0.003, "ours": true},
+      {"name": "ChronoRepo + one Kimi-K2 call, depth 100", "acc5": 83.7, "acc10": 88.6, "cost": "<$0.002", "usd": 0.002, "ours": true},
+      {"name": "Agentless, Claude-3.5 (quoted)", "acc5": 67.5, "acc10": 67.5, "cost": "LLM calls", "usd": null, "ours": false},
+      {"name": "SWE-agent, Claude-3.5 (quoted)", "acc5": 77.7, "acc10": 77.7, "cost": "≈$0.67", "usd": 0.67, "ours": false},
+      {"name": "OpenHands, Claude-3.5 (quoted)", "acc5": 79.8, "acc10": 80.0, "cost": "≈$0.79", "usd": 0.79, "ours": false},
+      {"name": "LocAgent, Claude-3.5 agent (quoted)", "acc5": 83.4, "acc10": 86.1, "cost": "≈$0.66", "usd": 0.66, "ours": false},
+      {"name": "SweRankLLM-Large 32B (quoted)", "acc5": 86.6, "acc10": 89.8, "cost": "GPU serving", "usd": null, "ours": false}
+    ]
+  },
+  "swebench": {
+    "title": "Issue → files on SWE-bench",
+    "caption": "Strict file-level Acc@5 (all gold files in the top 5), leakage-free protocol: every signal is computed from the repository state strictly before the fix.",
+    "columns": ["Lite (n=300)", "Verified (n=500)"],
+    "rows": [
+      {"name": "BM25 text search", "values": [48.3, 36.2], "ours": false},
+      {"name": "Identifier search (grep)", "values": [42.7, 39.2], "ours": false},
+      {"name": "Propagation over both layers", "values": [66.7, 54.8], "ours": true},
+      {"name": "ChronoRepo candidates, no LLM", "values": [72.0, 68.8], "ours": true},
+      {"name": "ChronoRepo + one 7B call", "values": [80.0, 77.0], "ours": true}
+    ]
+  },
+  "ablation": {
+    "title": "Ablation on LocBench",
+    "caption": "n=559, strict Acc@5; full method 67.4 (candidates only, no LLM). One component removed at a time; p from exact McNemar. Every hyper-parameter is inert: layer mix α, decay λ, iterations, restart and RRF k all give |Δ| ≤ 0.7, p > 0.18.",
+    "rows": [
+      {"name": "Rank fusion replaced by fixed-cap union", "delta": -9.8, "p": "<0.001"},
+      {"name": "without path tokens", "delta": -7.2, "p": "<0.001"},
+      {"name": "without graph propagation (both seeds)", "delta": -3.0, "p": "0.033"},
+      {"name": "without recency prior", "delta": -2.7, "p": "0.028"},
+      {"name": "without test/doc demotion", "delta": -2.5, "p": "0.003"},
+      {"name": "without paths quoted in the issue", "delta": -1.1, "p": "0.031"},
+      {"name": "without the raw BM25 list", "delta": -0.5, "p": "0.711"}
+    ]
+  },
+  "impact": {
+    "title": "Impact set: given one changed file, predict the rest",
+    "caption": "2,309 recent multi-file commits from 12 projects, each held out from its own graph. History dominates structure here — and the twenty-year-old ROSE co-change counter still beats our propagation variants on 7 of 12 projects. We report this negative result prominently; it is exactly the evidence the UI surfaces.",
+    "rows": [
+      {"name": "ROSE, raw co-change counts", "r10": 0.629, "ours": false},
+      {"name": "Propagation over history", "r10": 0.577, "ours": true},
+      {"name": "Propagation over imports", "r10": 0.396, "ours": true}
+    ]
+  },
+  "pareto": {
+    "title": "Strict Acc@5 versus cost per issue on LocBench",
+    "caption": "Only systems with a published dollar figure are plotted; fine-tuned systems (LocAgent-7B, SweRank) additionally require standing GPU serving, which the dollar axis does not capture. Training-free points at ~$0 sit on the left edge.",
+    "points": [
+      {"label": "BM25", "acc5": 34.7, "usd": 0, "ours": false},
+      {"label": "ChronoRepo candidates", "acc5": 67.4, "usd": 0, "ours": true},
+      {"label": "+ 7B call", "acc5": 76.9, "usd": 0.001, "ours": true},
+      {"label": "+ 9B call", "acc5": 80.5, "usd": 0.001, "ours": true},
+      {"label": "+ Kimi-K2, depth 100", "acc5": 83.7, "usd": 0.002, "ours": true},
+      {"label": "SweRank 7B", "acc5": 85.5, "usd": 0.01, "ours": false},
+      {"label": "LocAgent 7B (fine-tuned)", "acc5": 78.6, "usd": 0.05, "ours": false},
+      {"label": "LocAgent + Claude-3.5", "acc5": 83.4, "usd": 0.66, "ours": false},
+      {"label": "SWE-agent", "acc5": 77.7, "usd": 0.67, "ours": false},
+      {"label": "OpenHands", "acc5": 79.8, "usd": 0.79, "ours": false}
+    ]
+  }
+}
