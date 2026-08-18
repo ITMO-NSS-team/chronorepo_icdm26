@@ -112,12 +112,13 @@ export default function IndexView({ config, onIndexed, repo, goto }: {
             {busy ? "Indexing…" : "Index repository"}
           </button>
           <span className="hint">
-            first run clones the repository; re-indexing only touches changed blobs
+            first run clones the repository; re-indexing only touches changed
+            blobs
           </span>
         </div>
 
         <div className="chips" style={{ marginTop: 12 }}>
-          <span className="hint">try:</span>
+          <span className="hint">or start with one of these — one click, ~1 s:</span>
           <span className="repo-suggestions">
             {(config?.bundled_repos ?? []).map((r) => (
               <button key={r} className="ghost" disabled={busy}
@@ -157,10 +158,10 @@ export default function IndexView({ config, onIndexed, repo, goto }: {
             <span className="mono hint">@ {repo.rev.slice(0, 12)}</span>
             <span className="spacer" />
             <button className="ghost" onClick={() => goto("graph")}>
-              Open graph →
+              02 Graph →
             </button>
             <button className="ghost" onClick={() => goto("issue")}>
-              Localize an issue →
+              04 Localize an issue →
             </button>
           </div>
           <div className="chips">

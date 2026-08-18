@@ -90,8 +90,20 @@ export default function IssueView({ indexId, repo, config, onOpen, onIndexed }: 
   useEffect(() => { if (config && !model) setModel(config.llm.default); },
             [config, model]);
 
+  // Land on a real issue for this repository: the booth visitor should be one
+  // click away from an answer, not staring at an empty textarea. A pasted or
+  // already-chosen issue is never overwritten.
   useEffect(() => {
-    api.instances(repo.repo).then((r) => setInstances(r.instances)).catch(() => {});
+    let alive = true;
+    api.instances(repo.repo).then((r) => {
+      if (!alive) return;
+      setInstances(r.instances);
+      if (!issue.trim() && !instanceId && r.instances.length) {
+        const pick = r.instances.find((i) => i.featured) ?? r.instances[0];
+        loadInstance(pick.id).catch(() => {});
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
   }, [repo.repo]);
 
   async function loadInstance(iid: string) {
