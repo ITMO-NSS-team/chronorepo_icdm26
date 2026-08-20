@@ -30,6 +30,22 @@ The LLM rerank needs an OpenRouter key: `OPENROUTER_API_KEY` in the repo-root
 `.env` (or `experiments/.openrouter_key`). Without it the app runs fine and
 the third column simply stays empty.
 
+## The demo path
+
+The app is one scenario read top to bottom; every step carries a brief and a
+`Next` button, so it can be handed to a visitor without narration.
+
+| step | what happens |
+|---|---|
+| 01 Index | paste a GitHub URL (or click a bundled repo); the log is the pipeline's own stages |
+| 02 Graph | both layers over the same files; the slider ages the co-change weights |
+| 03 Impact set | pick a file, get what changes with it, with the evidence per row |
+| 04 Localize an issue | the main event: BM25 vs candidates vs one small-model call |
+| 05 Results | the paper's tables and the cost/accuracy frontier |
+
+Step 04 preloads a featured benchmark issue for the indexed repository, so a
+cold visitor is one click from an answer.
+
 ## Modes
 
 `CHRONO_MODE` selects what the app is allowed to do:
@@ -66,6 +82,8 @@ app/
     rerank.py        the one LLM call: run_rerank's prompt, real token cost
 data/leaderboard.json   the paper's tables (Tables I-V of main.tex)
 web/                 Vite + React + TypeScript + sigma.js frontend
+                     (Newsreader + IBM Plex Mono, bundled via @fontsource:
+                      `npm run build` needs no network at demo time)
 scripts/             snapshot prebuilder
 tests/               parity with the reported runs, API smoke tests
 legacy/              the original single-file prototype, kept for reference

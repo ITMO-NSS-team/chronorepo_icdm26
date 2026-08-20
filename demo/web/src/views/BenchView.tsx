@@ -3,9 +3,9 @@ import { api } from "../api";
 
 type Point = { label: string; acc5: number; usd: number; ours: boolean };
 
-/* Two-series categorical palette, validated for both themes
-   (light #2a78d6/#eb6834, dark #3987e5/#d95926): CVD ΔE ≥ 24, contrast ≥ 3:1.
-   Identity is carried by shape and direct labels as well as hue. */
+/* Two series, the same two signal colours as everywhere else: vermilion for
+   our lane, indigo for published systems. Identity is carried by fill and
+   direct labels as well as hue, so the chart survives CVD and greyscale. */
 function Pareto({ title, caption, points }: {
   title: string; caption: string; points: Point[];
 }) {
@@ -33,7 +33,7 @@ function Pareto({ title, caption, points }: {
           {[40, 50, 60, 70, 80, 90].map((v) => (
             <g key={v}>
               <line x1={M.l} x2={W - M.r} y1={py(v)} y2={py(v)}
-                    stroke="var(--grid)" strokeWidth="1" />
+                    stroke="var(--rule)" strokeWidth="1" />
               <text x={M.l - 8} y={py(v) + 4} textAnchor="end"
                     fontSize="11" fill="var(--muted)">{v}</text>
             </g>
@@ -50,7 +50,7 @@ function Pareto({ title, caption, points }: {
 
           {points.map((p) => {
             const cx = px(p.usd), cy = py(p.acc5);
-            const color = p.ours ? "var(--blue)" : "var(--orange)";
+            const color = p.ours ? "var(--temporal)" : "var(--static)";
             const right = cx < W - 190;
             return (
               <g key={p.label}
@@ -69,8 +69,8 @@ function Pareto({ title, caption, points }: {
         </svg>
       </div>
       <div className="chips">
-        <span className="chip"><b style={{ color: "var(--blue)" }}>●</b> ChronoRepo (training-free)</span>
-        <span className="chip"><b style={{ color: "var(--orange)" }}>○</b> published systems</span>
+        <span className="chip"><b style={{ color: "var(--temporal)" }}>●</b> ChronoRepo (training-free)</span>
+        <span className="chip"><b style={{ color: "var(--static)" }}>○</b> published systems</span>
         {hover && (
           <span className="chip win">
             {hover.label}: Acc@5 <b>{hover.acc5}</b>,{" "}

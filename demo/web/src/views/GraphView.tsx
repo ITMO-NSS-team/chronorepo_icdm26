@@ -2,12 +2,51 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Graph from "graphology";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import Sigma from "sigma";
+import type { NodeHoverDrawingFunction } from "sigma/rendering";
 import { api, type GraphData, type RepoStats } from "../api";
 import type { Tab } from "../App";
 import { ms, short } from "../components/bits";
 
-const DIR_COLORS = ["#2a78d6", "#1baf7a", "#7c5cd6", "#eb6834", "#c9a227",
-                    "#c0392b", "#0f8c8c", "#8a6d3b"];
+/* Sigma paints on a WebGL canvas and needs literals, so the two signal
+   colours of styles.css (indigo = imports, vermilion = co-change) and the
+   directory hues are mirrored here, once per theme. */
+const DARK = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+
+const DIR_COLORS = DARK
+  ? ["#6fa8dc", "#7cc08a", "#b08cb5", "#e8674a", "#d9a520",
+     "#7fb3c4", "#c49a6f", "#9db56f"]
+  : ["#1e4f7a", "#2f6b3a", "#6d4470", "#b4331c", "#9a6b08",
+     "#3f6b7d", "#7a5230", "#4a5a2f"];
+const STATIC_EDGE = DARK ? "#6fa8dcaa" : "#1e4f7aaa";
+const TEMPORAL_EDGE = DARK ? "#e8674acc" : "#b4331ccc";
+const IDLE_EDGE = DARK ? "#8d847166" : "#8d847188";
+
+/* Sigma's stock hover paints a white card, which disappears on the dark
+   ground; this is the same card in the page's own colours. */
+const drawNodeHover: NodeHoverDrawingFunction = (ctx, data, settings) => {
+  const size = settings.labelSize;
+  ctx.font = `${settings.labelWeight} ${size}px ${settings.labelFont}`;
+  const label = data.label ?? "";
+  const r = data.size + 2;
+  ctx.fillStyle = DARK ? "#1d1a15" : "#fbf9f3";
+  ctx.strokeStyle = DARK ? "#f4eee1" : "#191713";
+  ctx.lineWidth = 1;
+  if (label) {
+    const w = ctx.measureText(label).width;
+    ctx.beginPath();
+    ctx.rect(data.x + r, data.y - size, w + 10, size + 8);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.arc(data.x, data.y, r, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.fill();
+  if (label) {
+    ctx.fillStyle = DARK ? "#f4eee1" : "#191713";
+    ctx.fillText(label, data.x + r + 5, data.y + size / 2 + 1);
+  }
+};
 
 function colorFor(dir: string) {
   let h = 0;
@@ -86,12 +125,12 @@ export default function GraphView({ indexId, repo, file, onPick, onOpen }: {
     });
     for (const e of data.static) {
       if (g.hasNode(e.a) && g.hasNode(e.b) && !g.hasEdge(e.a, e.b))
-        g.addEdge(e.a, e.b, { kind: "static", size: 1, color: "#2a78d6aa" });
+        g.addEdge(e.a, e.b, { kind: "static", size: 1, color: STATIC_EDGE });
     }
     for (const e of data.temporal) {
       if (!g.hasNode(e.a) || !g.hasNode(e.b)) continue;
       const attrs = { kind: "temporal", count: e.count, last: e.last,
-                      ts: e.ts, size: 1, color: "#eb6834cc" };
+                      ts: e.ts, size: 1, color: TEMPORAL_EDGE };
       if (g.hasEdge(e.a, e.b)) {
         g.setEdgeAttribute(e.a, e.b, "kind", "both");
         g.mergeEdgeAttributes(e.a, e.b, attrs);
@@ -111,7 +150,12 @@ export default function GraphView({ indexId, repo, file, onPick, onOpen }: {
       labelDensity: 0.5,
       labelGridCellSize: 70,
       labelRenderedSizeThreshold: 6,
-      defaultEdgeColor: "#8887",
+      labelFont: '"IBM Plex Mono", ui-monospace, monospace',
+      labelSize: 11,
+      labelWeight: "500",
+      labelColor: { color: DARK ? "#f4eee1" : "#191713" },
+      defaultDrawNodeHover: drawNodeHover,
+      defaultEdgeColor: IDLE_EDGE,
       zIndex: true,
     });
     graphRef.current = g;
@@ -184,7 +228,7 @@ export default function GraphView({ indexId, repo, file, onPick, onOpen }: {
           !alive && !(attrs.kind === "both" && showStatic));
         g.setEdgeAttribute(edge, "size", 0.6 + 4 * (maxW ? w / maxW : 0));
         g.setEdgeAttribute(edge, "color",
-          attrs.kind === "both" && !alive ? "#2a78d688" : "#eb6834cc");
+          attrs.kind === "both" && !alive ? STATIC_EDGE : TEMPORAL_EDGE);
       } else {
         g.setEdgeAttribute(edge, "hidden", !showStatic);
         g.setEdgeAttribute(edge, "size", 0.9);
