@@ -113,7 +113,6 @@ export default function App() {
       <header className="app">
         <h1>Chrono<em>Repo</em></h1>
         <span className="tag mark">ICDM 2026 demo</span>
-        <span className="tag">CPU-only graph · no fine-tuning · no agent loop</span>
         {config && <span className="tag">mode {config.mode}</span>}
       </header>
 

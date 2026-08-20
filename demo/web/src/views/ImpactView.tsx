@@ -4,9 +4,8 @@ import { EvidenceChips, Path, ms } from "../components/bits";
 
 /** R@10 from the paper's impact-set experiment (2,309 held-out commits,
  *  12 projects). ROSE winning is a reported negative result, not a bug. */
-const PAPER_R10: Record<string, { label: string; r10: string; note: string }> = {
-  rose: { label: "ROSE (raw co-change)", r10: "0.629",
-          note: "twenty-year-old association counter — still the best cheap method" },
+const PAPER_R10: Record<string, { label: string; r10: string; note?: string }> = {
+  rose: { label: "ROSE (raw co-change)", r10: "0.629" },
   temporal_ppr: { label: "propagation over history", r10: "0.577",
                   note: "personalized propagation, temporal layer only" },
   static_ppr: { label: "propagation over imports", r10: "0.396",
@@ -89,7 +88,9 @@ export default function ImpactView({ indexId, file, onPick }: {
           </button>
         ))}
       </div>
-      <div className="hint" style={{ marginTop: 6 }}>{PAPER_R10[method].note}</div>
+      {PAPER_R10[method].note && (
+        <div className="hint" style={{ marginTop: 6 }}>{PAPER_R10[method].note}</div>
+      )}
 
       {err && <div className="err">{err}</div>}
       {busy && <div className="hint" style={{ marginTop: 10 }}>propagating…</div>}
